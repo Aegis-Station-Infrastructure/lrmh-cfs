@@ -1,0 +1,72 @@
+# Copyright 2026 Aegis Station Infrastructure LLC
+# SPDX-License-Identifier: Apache-2.0
+#
+# Build LRMH against a clean NASA cFS v7.0.0 checkout: run the standalone
+# host build and unit tests, install the apps into the cFS tree, build the
+# flight image, boot it with the HAL simulator, and check that all eight
+# LRMH apps initialise.
+
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  cfs-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out LRMH (with NASA support-app submodules)
+        uses: actions/checkout@v4
+        with:
+          path: lrmh-cfs
+          submodules: recursive
+
+      - name: Check out NASA cFS v7.0.0
+        run: |
+          git clone --branch v7.0.0 --depth 1 --recurse-submodules --shallow-submodules \
+            https://github.com/nasa/cFS.git cfs
+
+      - name: Host prerequisites
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q cmake build-essential python3-pip
+          # The bridge uses the websockets asyncio API (websockets >= 13);
+          # the Ubuntu package is older.
+          python3 -m pip install --break-system-packages 'websockets>=13'
+          sudo sysctl fs.mqueue.msg_max=1024
+
+      - name: Ground tools compile + CLI smoke
+        run: |
+          cd lrmh-cfs
+          python3 -m py_compile ground/*.py scripts/*.py sim/tools/*.py
+          python3 ground/lrmh_bridge.py --help > /dev/null
+          python3 ground/lrmh_console.py --help > /dev/null
+          python3 scripts/lrmh_smoke_test.py --help > /dev/null
+
+      - name: Standalone host build + unit tests
+        run: |
+          cd lrmh-cfs
+          cmake -B build -S . -DTARGET=sim
+          cmake --build build -j"$(nproc)"
+          (cd build && ctest --output-on-failure)
+          ./build/sim/regolith_probe --list
+
+      - name: Install LRMH into the cFS tree
+        run: |
+          cd lrmh-cfs
+          ./install.sh "$GITHUB_WORKSPACE/cfs"
+
+      - name: Build cFS + LRMH
+        run: |
+          cd cfs
+          make SIMULATION=native MISSIONCONFIG=sample prep
+          make -j"$(nproc)"
+          make install
+          ls build/exe/cpu1/cf/lrmh_*.so build/exe/cpu1/cf/{lc,sc,hs,ds,fm}.so
+
+      - name: Boot the flight software and check app init
+        run: |
+          cd lrmh-cfs
+          bash scripts/lrmh_boot_check.sh "$GITHUB_WORKSPACE/cfs/build/exe/cpu1"

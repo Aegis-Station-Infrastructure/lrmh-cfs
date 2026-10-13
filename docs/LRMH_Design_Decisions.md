@@ -1,0 +1,83 @@
+# LRMH Design Decisions
+
+**Document:** LRMH-DD-001
+**Version:** 1.0
+**Date:** October 2026
+
+*Scope: an index of the eighteen architecture decisions the code comments cite as ADR-00NN, each reduced to the decision and its main reason.*
+
+---
+
+Source comments throughout `apps/`, `hal/`, `msg/` and `tables/` reference these by number. Where the as-built code has drifted from the original decision text, the entry below describes what is built; the Architecture Guide is the reference for behaviour.
+
+### ADR-0001: Mission application source is identical across sim, bench and flight
+
+The eight mission apps, the message definitions, the LC and SC table contents, the sequence-token rules and the ground UI are the same bytes in every environment. Only the HAL backend process, the cFS target configuration and host, port and calibration data may differ, and the rule is enforced by code organisation (the apps link one UDP client against one header) rather than by build flags. The reason is that sim-only code paths accumulate until the simulation no longer predicts the real behaviour, and for an instrument whose fault responses are rehearsed in simulation that gap is the thing that matters most. Rejected: a build-flag sim path, parallel app implementations, a sim-only command path through the bridge, a sim-only ground-truth telemetry packet.
+
+### ADR-0002: Regolith physics is opaque to the flight software
+
+No regolith model exists anywhere in the flight software. `lrmh_sense` sees six sensor channels, `lrmh_proc` derives every engineering quantity by signal processing on those channels, the sequencer advances only on commanded depth, load and duration thresholds, and `lrmh_fault` reacts only to hardware envelope violations. The regolith model lives solely in the simulator behind the HAL. The capability is a measurement instrument producing data products, not an onboard classifier, and any soil model embedded in flight code would carry assumptions that fail on the real surface. The decision explicitly rejects an onboard learned classifier (a decision tree or nearest-neighbour model trained on simulated sites) on the grounds that it could only be trained on simulated data and would encode the simulator's biases; all data products are to be signal-derived, not model-derived. Also rejected: a C library shared between the sim and `lrmh_proc`, model-based phase advance, sim-only ground-truth telemetry.
+
+### ADR-0003: HAL abstraction level is position and force setpoints, not motor duty cycle
+
+The HAL exposes a position-mode command and a force-mode command, each with a safety clamp on the other axis, plus retract, hold, e-stop, init, a pulled sensor-read struct and a health struct. Servo loops run below the HAL in the motor controller, and sensors are polled by `lrmh_sense` at 100 Hz rather than pushed. This level hides motor type and loop tuning so `lrmh_ctrl` is portable across backends, while still letting load testing and penetration profiling be composed from the same two primitives; the clamps live in the controller because it can react within one cycle and the FSW cannot. Rejected: phase-level HAL commands, raw duty cycle, position-only with force monitored in the FSW, push-mode sensors.
+
+### ADR-0004: Mode FSM and site-test phase machine
+
+Two separate state machines: a six-mode instrument FSM (OFF, STANDBY, READY, TESTING, SAFE, FAULT) owned by `lrmh_cmd` with an explicit transition matrix, and a nine-phase site-test machine owned by `lrmh_seq` that is active only in TESTING. Every SAFE entry bumps the token epoch, and phases advance only on commanded thresholds. As built, each phase is a step sequence that advances when `lrmh_ctrl` reports the command complete or its deadline passes. Separating them keeps the ground-visible lifecycle distinct from the internal recipe, lets recovery tiers act at the phase level without touching the mode FSM, and makes the five canonical phases traceable alongside the four FSW bookends (PRECHECK, POSITIONING, PROCESSING, REPORTING). As built, a T1 or T2 recovery during TESTING leaves the mode in TESTING; only T3 or ABORT moves it to SAFE. Rejected: one merged fifteen-state FSM, phase advance on model predictions, both machines in one app.
+
+### ADR-0005: Message ID block allocation
+
+LRMH owns command MIDs 0x18A0 to 0x18A7, telemetry 0x08A0 to 0x08AC, internal broadcasts 0x18B0 to 0x18B8, scheduler wakeups 0x18C0 to 0x18C2, and reserves 0x08D0 to 0x08D7 for inbound host-vehicle telemetry. The allocation exists so that an instrument and a host vehicle sharing one software bus have no collisions, and so the block is pinned rather than implicit. LC's upstream command topics (0xA4 to 0xA6) land inside the LRMH block and are relocated at install time. Rejected: a single family-wide MID table in a shared repository, packing internal and wakeup MIDs into the command block via function codes, relying on sample-app default MIDs.
+
+### ADR-0006: Eight mission apps
+
+The split into `lrmh_cmd`, `lrmh_seq`, `lrmh_ctrl`, `lrmh_sense`, `lrmh_proc`, `lrmh_report`, `lrmh_hk` and `lrmh_fault` is pinned. Each boundary is justified by at least one of: a different rate requirement (sense at 100 Hz versus everything else at 10 Hz or less), an isolated failure mode (a sequencer crash must not take the command surface with it), a different ground-visible interface, or ownership by a different state machine. Rejected: four-app and two-app splits, a single executive plus one mission app, dropping the fault app entirely, a separate safing app.
+
+### ADR-0007: Sequence-token protocol for inter-app command ordering
+
+Every command the sequencer sends carries a packed 32-bit token (16-bit epoch, 8-bit phase, 8-bit count). Receivers validate against their last accepted token and silently drop stale, duplicate or reordered commands; each receiver's own safing commands (a retract or e-stop, a sense STOP) are always accepted, a decision each app makes in its own command namespace. The epoch advances on INIT_INSTRUMENT, SAFE entry, a sequencer restart and cold start, always through one code path that broadcasts a reset. The software bus gives no ordering or replay guarantee, and two real failure modes motivated this: a stale buffer-start command leaking across a phase boundary and corrupting data, and in-flight commands from a crashed sequencer confusing its restarted replacement. Rejected: per-pair sequence numbers, message authentication, vector clocks, acknowledgements before phase advance, the cFE timestamp as the ordering key.
+
+### ADR-0008: Abort criteria and three-tier recovery
+
+Each fault category maps to one default tier with bounded escalation: T1 RESUME_PHASE for transient conditions that did not corrupt data (encoder loss, force-rate excursion, sensor timeout), three attempts per phase then T2; T2 SKIP_SITE for site-specific conditions that block this site without indicating damage (stall, force saturation, hard stop, depth disagreement, host nav timeout), tagging the site PARTIAL and reporting what was collected, three skips within five sites then T3; T3 SAFE for instrument-health faults (overcurrent, thermal, bus voltage), escalation or ground ABORT. The single-tier predecessor threw away a traverse's science when one site failed and treated force saturation on hard regolith, a valid measurement, as a hardware fault. Ground ABORT is always T3 and there is deliberately no ground RESUME. Rejected: two tiers, five tiers, per-fault bespoke sequences, time-based escalation, force saturation or bus voltage as T1.
+
+### ADR-0009: Sensor freshness floor
+
+Every HAL read carries a `valid` flag, a per-channel `channel_valid` mask and an acquisition timestamp populated by the backend; `lrmh_sense` drops stale channels and raises SENSOR_TIMEOUT after three consecutive stale reads, and `lrmh_proc` rejects any sample older than the current phase start. Trusting HAL values unconditionally made a stuck reading indistinguishable from a fresh one, and backend latency differs between sim, bench and flight. As built, per-channel maximum-age checks are not applied because the HAL and cFE clock domains are not cross-calibrated; the backend valid bits, the three-cycle rule and the 200 ms polled floor in `lrmh_fault` are what run. Rejected: unconditional trust, push-mode HAL, one global floor, the CCSDS timestamp in place of acquisition time.
+
+### ADR-0010: Actuator HAL surface and safety semantics
+
+The contract for every HAL command is pinned: acceptance is distinct from completion (the FSW polls health); a position move that hits its force clamp stops in place and reports STOPPED_AT_FORCE_CLAMP as a normal termination, preserving the force-limited depth datum; a force ramp that hits its stroke clamp holds; Retract has an implicit clamp at 1.5 times the force envelope and reports RETRACT_BLOCKED; Hold, Retract and EStop are three distinct stops; EStop latches until Init; Init self-tests and leaves the actuator where it is. A six-state actuator machine (COLD, IDLE, MOVING, HOLDING, FAULT, ESTOP) is defined. The previous interface worked but was never written down as a contract that a bench or flight implementer could build to without reading the sim. Rejected: merging Hold and Retract, one Stop with a mode parameter, unclamped commands, a self-retracting force clamp.
+
+### ADR-0011: Host-vehicle telemetry subscription
+
+`lrmh_sense` subscribes directly to the host vehicle's pose and velocity telemetry (0x08C5 and 0x08C6, published at 20 Hz), caches them with receipt time, and stamps every sample with the host state and explicit age fields. A cache older than 500 ms is flagged without faulting; one stale for more than 5 s during TESTING is the HOST_NAV_TIMEOUT fault (T2). The host MIDs are platform-config constants so a different host is a configuration change. This satisfies the time-synchronisation requirement on the bus, where ground-side cross-referencing by timestamp is brittle under clock skew and dropped frames, and needs no change on the host side. Rejected: ground-side alignment only, a separate host-bridge app, stamping with the host's clock, subscribing to all host telemetry.
+
+### ADR-0012: Environmental envelopes as a single source of truth
+
+Every limit (650 N force, 1000 N/s force rate, 5 A, 0.35 m stroke, 60 C, 22 to 34 V, plus timeouts, tier parameters, buffer sizes, pipe depths, rates and paths) lives once in `lrmh_platform_cfg.h`, tagged as a hardware, operational or science limit, with the LC watchpoint margin recorded beside it. The HAL clamps, the LC tables, `lrmh_fault` and the ground gauges all consume the same constants, so a threshold change is one edit and copies cannot drift. The decision states that none of these numbers is canonical: the capability definition deliberately contains no numbers, and every value is a project engineering choice for a simulated instrument that a different realisation with different hardware would change. Rejected: per-app constants, limits only in the LC table source, a fully loadable envelope table (hardware limits should require a rebuild), environment variables.
+
+### ADR-0013: Anomaly detection on two paths
+
+`lrmh_fault` evaluates both event-driven (on each sample, via the LC notification chain for threshold categories) and polled (a 10 Hz tick for state-watching categories; sensor timeout is implemented, stall, encoder loss, depth disagreement and host nav timeout are reserved). First raise wins per category and further raises are coalesced until recovery clears the bit; outside TESTING only health categories are acted on, as T3. An event-only checker stops working entirely when samples stop arriving, which is exactly when a sensor timeout needs to be caught. As built, SENSOR_TIMEOUT is the implemented polled category. Rejected: event-only, polled-only, a third slow-check app, coalescing by message rather than category, running fault evaluation on the 100 Hz tick.
+
+### ADR-0014: Site-test dispatch protocol
+
+`START_SITE_TEST` keeps the original fields and adds dispatch flags, session and sequence numbers, a paired-site id for disturbed/undisturbed pairing, micro-site offsets and a repeat-load count. Acceptance requires mode READY and an acceptable host nav state (fresh pose by default; STRICT_NAV also requires the host stopped; OVERRIDE_HOST and WITNESS_TARGET bypass the check). With IDEMPOTENT set, `lrmh_cmd` absorbs retries through an eight-entry cache keyed on session and sequence number, and the token epoch is bumped as the last step before forwarding so a rejection never wastes an epoch. Lost acknowledgements had caused duplicate test attempts, there was no check that the host had stopped, and the pairing required for disturbance sensitivity had no representation. Rejected: per-host command shapes, session begin/end commands, always-on idempotency, always requiring the host idle, using SC for ground retries.
+
+### ADR-0015: Sample buffer overflow policy
+
+Per-phase storage starts RAW (10000 samples) and switches one way to STREAMING when the buffer fills: per-channel running statistics, a 1000-entry reservoir sample (Vitter's Algorithm R), the first and last 500 raw samples as provenance, and a 2-D force-versus-depth histogram. A one-time PHASE_EXTENDED telemetry packet marks the transition, `lrmh_proc` consumes both modes through one input struct, and the site record carries the storage mode. Long load ramps on soft sites can run several minutes and overflow any fixed buffer, and silently losing the late tail of the curve loses the science; enlarging the buffer only moves the cliff. Rejected: a bigger buffer, silent truncation, a ring buffer, decimation, compression, histogram-only storage.
+
+### ADR-0016: Report I/O through the cFS DS app
+
+`lrmh_report` performs no file I/O. It publishes a fixed-size binary site record and a human-readable text record on two dedicated telemetry MIDs (0x08AA, 0x08AB), and the standard DS app captures them into rotated file sets (`/cf/lrmh/data/lrmh_site_*.bin` at 1 MB or 24 h, `/cf/lrmh/reports/lrmh_human_*.txt` at 512 KB or 24 h) that FM can serve. JSON is no longer produced onboard; the bridge and the ground readers render it from the binary record. Blocking writes in the message loop can stall on real storage, back up the pipe and drop sequencer commands, and the previous output had no rotation and no downlink path. Rejected: a worker thread, direct FM registration, a custom archive app, streaming the full 100 Hz stream through DS, dropping the human-readable format.
+
+### ADR-0017: FDIR via LC, SC and HS with lrmh_fault as a thin orchestrator
+
+Threshold detection moves out of `lrmh_fault` into LC watchpoint tables that reference the ADR-0012 constants; LC actionpoints fire SC sequences that notify `lrmh_fault` with the fault flag; `lrmh_fault` shrinks to a tier lookup, escalation counters, the multi-step cross-app recovery and the ADR-0013 polled path. Three recovery RTSes exist as a fallback when the orchestrator is unavailable, and HS restart policy is set per app (no restart for `lrmh_cmd`, restart for the rest). Hard-coded thresholds duplicated the single source of truth and could not be tuned without a rebuild, and table content is easier to review than detection code; but a T1 resume needs in-progress phase parameters and cross-app state that a linear RTS cannot express, which is why a coordinator app is kept rather than dissolved into tables. As built there is one actionpoint and one notify RTS per fault flag (RTS 1 and 5 to 9), because a static RTS cannot carry the tripped watchpoint's argument. Rejected: deleting the fault app, keeping the monolithic fault app, all recovery in SC, two fault apps, EVS events as the control channel.
+
+### ADR-0018: Ground manual actuator commands route through lrmh_seq
+
+Manual actuator commands from the ground enter on the sequencer's command MID with function code 30 (`LRMH_SEQ_MANUAL_CTRL_CC`), carrying mode, target position, target force, rate limit and timeout. The sequencer accepts them only when its phase is IDLE, stamps a fresh token and forwards on the normal sequencer-to-controller MID. `lrmh_ctrl` only acts on tokened commands and ADR-0007 makes the sequencer the sole token producer; the ground cannot fabricate a token because it does not know the current epoch or phase, so the direct ground path to the controller silently does nothing. During a test the stop options are ABORT or waiting for completion. Rejected: the bridge stamping tokens, an untokened direct path on the controller, forwarding through `lrmh_cmd` (circular dependency on token state), requiring phase PRECHECK.

@@ -1,0 +1,33 @@
+# Build artifacts (standalone cmake tree and HAL backend builds)
+build/
+build-bench/
+build-flight/
+*.o
+*.a
+*.so
+*.tbl
+
+# OS junk
+.DS_Store
+._*
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Bridge-side runtime state (operator presets, site history) — data, not source
+ground/state/
+
+# Backups left by install.sh and editors
+*.bak
+
+# Local editor/tool settings
+.claude/

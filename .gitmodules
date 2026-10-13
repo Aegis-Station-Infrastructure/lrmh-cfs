@@ -1,0 +1,15 @@
+[submodule "vendor/cfs-support-apps/ds"]
+	path = vendor/cfs-support-apps/ds
+	url = https://github.com/nasa/DS.git
+[submodule "vendor/cfs-support-apps/fm"]
+	path = vendor/cfs-support-apps/fm
+	url = https://github.com/nasa/FM.git
+[submodule "vendor/cfs-support-apps/hs"]
+	path = vendor/cfs-support-apps/hs
+	url = https://github.com/nasa/HS.git
+[submodule "vendor/cfs-support-apps/lc"]
+	path = vendor/cfs-support-apps/lc
+	url = https://github.com/nasa/LC.git
+[submodule "vendor/cfs-support-apps/sc"]
+	path = vendor/cfs-support-apps/sc
+	url = https://github.com/nasa/SC.git

@@ -1,0 +1,3318 @@
+<!doctype html>
+<!-- Copyright 2026 Aegis Station Infrastructure LLC
+     SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LRMH</title>
+<style>
+:root {
+  /* Light theme (default) */
+  --bg:            #fafafa;
+  --bg-elevated:   #ffffff;
+  --bg-muted:      #f0f0f0;
+  --bg-input:      #ffffff;
+  --text:          #1a1a1a;
+  --text-secondary:#525252;
+  --text-tertiary: #8a8a8a;
+  --text-ghost:    #b8b8b8;
+  --border:        #d8d8d8;
+  --border-strong: #b0b0b0;
+
+  /* AEGIS Station teal */
+  --accent:        #1D9E75;
+  --accent-hover:  #248A6A;
+  --accent-dim:    #1D9E7522;
+  --accent-text:   #1D9E75;
+
+  --post-accent:   #EF9F27;
+  --post-dim:      #EF9F2722;
+
+  --info:          #2563EB;
+  --info-dim:      #2563EB22;
+  --warn:          #B45309;
+  --warn-dim:      #B4530922;
+  --danger:        #B91C1C;
+  --danger-dim:    #B91C1C22;
+  --success:       #15803D;
+  --success-dim:   #15803D22;
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:            #0f1115;
+    --bg-elevated:   #181b21;
+    --bg-muted:      #1f242b;
+    --bg-input:      #14171c;
+    --text:          #e8e8e8;
+    --text-secondary:#a8b0bd;
+    --text-tertiary: #6f7785;
+    --text-ghost:    #4f5764;
+    --border:        #2a313a;
+    --border-strong: #3a4350;
+    --accent-text:   #2ECC8E;
+    --accent-dim:    #1D9E7530;
+    --post-dim:      #EF9F2730;
+    --info-dim:      #2563EB30;
+    --warn-dim:      #B4530930;
+    --danger-dim:    #B91C1C30;
+    --success-dim:   #15803D30;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font); font-size: 14px; line-height: 1.45;
+}
+body { font-feature-settings: "tnum" 1; }
+button { font-family: inherit; font-size: inherit; cursor: pointer; }
+input, select, button { font-family: inherit; font-size: inherit; }
+a { color: var(--accent-text); text-decoration: none; }
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 18px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+.brand {
+  font-weight: 700; letter-spacing: 0.06em;
+  color: var(--accent-text);
+}
+.topbar .spacer { flex: 1; }
+.conn {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-secondary);
+}
+.conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-tertiary);
+}
+.conn.ok .conn-dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.conn.ok span.conn-text { color: var(--accent-text); }
+.site-pill {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px; padding: 2px 8px;
+  background: var(--bg-muted); border-radius: 999px;
+  color: var(--text-secondary);
+}
+.view-toggle {
+  background: var(--bg-muted); color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 6px;
+}
+.view-toggle:hover { background: var(--bg-input); border-color: var(--border-strong); }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  padding: 8px 14px; border-radius: 6px;
+  transition: background 0.1s, border-color 0.1s;
+}
+.btn:hover:not(:disabled) {
+  background: var(--bg-muted); border-color: var(--border-strong);
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary {
+  background: var(--accent); color: white;
+  border-color: var(--accent);
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-danger {
+  background: transparent; color: var(--danger);
+  border-color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) { background: var(--danger-dim); }
+.btn-ghost {
+  background: transparent; border-color: transparent;
+  color: var(--text-secondary);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--bg-muted); color: var(--text); }
+
+/* ── Operator view ───────────────────────────────────────── */
+main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.view-hidden { display: none !important; }
+
+.op-screen { display: none; }
+.op-screen.active { display: block; }
+
+.op-screen h1 {
+  font-size: 22px; font-weight: 600; margin: 0 0 4px 0;
+}
+.op-screen h1 + .subtitle {
+  color: var(--text-secondary); font-size: 13px; margin-bottom: 24px;
+}
+
+.banner {
+  display: flex; gap: 12px; align-items: center;
+  padding: 12px 16px; margin-bottom: 16px;
+  background: var(--warn-dim); border: 1px solid var(--warn);
+  border-radius: 6px; color: var(--text);
+}
+.banner.error { background: var(--danger-dim); border-color: var(--danger); }
+.banner.info  { background: var(--info-dim);   border-color: var(--info); }
+.banner .text { flex: 1; }
+
+/* Pick screen */
+.card-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.test-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 20px; text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); transition: all 0.1s;
+}
+.test-card:hover { border-color: var(--accent); background: var(--accent-dim); }
+.test-card .icon { color: var(--accent-text); }
+.test-card h2 { margin: 4px 0 0 0; font-size: 16px; font-weight: 600; }
+.test-card .desc {
+  flex: 1; color: var(--text-secondary); font-size: 13px;
+  margin-bottom: 8px;
+}
+.test-card .meta {
+  font-size: 12px; color: var(--text-tertiary);
+}
+
+.op-actions {
+  display: flex; justify-content: space-between;
+  margin-top: 16px;
+}
+
+/* Params screen */
+.preset-row {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 12px;
+  font-size: 12px; color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+.preset-row select {
+  padding: 6px 10px;
+  background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px;
+  min-width: 240px;
+}
+
+/* Pick-screen site history */
+.site-history {
+  margin-top: 16px; margin-bottom: 16px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+}
+.site-history .hdr {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.history-list {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 13px;
+}
+.history-list .history-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  gap: 12px; align-items: center;
+  padding: 4px 0;
+  font-variant-numeric: tabular-nums;
+}
+.history-list .history-row .site {
+  color: var(--text);
+  font-weight: 500;
+}
+.history-list .history-row .meta {
+  color: var(--text-tertiary); font-size: 12px;
+}
+.history-list .history-row .ts {
+  color: var(--text-tertiary); font-size: 11px;
+}
+.history-list .history-row .quality-pill {
+  font-size: 10px; padding: 2px 8px;
+}
+.history-list .history-empty {
+  color: var(--text-tertiary); font-size: 12px; font-style: italic;
+}
+
+.params-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  background: var(--bg-elevated);
+  padding: 24px; border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.params-form.single { grid-template-columns: 1fr; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 12px; color: var(--text-secondary);
+  font-weight: 500;
+}
+.field input, .field select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px; border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.field input:focus, .field select:focus {
+  outline: 2px solid var(--accent-dim); border-color: var(--accent);
+}
+.field .hint { font-size: 11px; color: var(--text-tertiary); }
+.field.static-value {
+  padding: 8px 10px; background: var(--bg-muted);
+  border-radius: 4px; color: var(--text-secondary);
+}
+
+/* Run screen */
+.phase-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; margin-bottom: 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.spinner {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.phase-bar .phase-name { font-size: 15px; font-weight: 500; }
+.phase-bar .elapsed {
+  margin-left: 8px; color: var(--text-secondary);
+  font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px;
+}
+.phase-bar .data-flow {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.phase-bar .data-flow .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: background 0.15s;
+}
+.phase-bar .data-flow.flowing .dot {
+  background: var(--success);
+  animation: dataPulse 0.6s ease-out;
+}
+.phase-bar .data-flow.flowing { color: var(--success); }
+.phase-bar .data-flow.stale .dot { background: var(--warn); }
+.phase-bar .data-flow.stale       { color: var(--warn); }
+.phase-bar .data-flow.dead .dot   { background: var(--danger); }
+.phase-bar .data-flow.dead        { color: var(--danger); }
+@keyframes dataPulse {
+  0%   { box-shadow: 0 0 0 0 var(--success); }
+  100% { box-shadow: 0 0 0 6px transparent; }
+}
+.phase-bar .phase-eta {
+  font-size: 12px; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.phase-progress {
+  margin: -8px 0 16px 0;
+}
+.phase-progress .progress-track {
+  height: 4px; background: var(--bg-muted);
+  border-radius: 2px; overflow: hidden; margin-bottom: 4px;
+}
+.phase-progress .progress-fill {
+  height: 100%; background: var(--accent);
+  width: 0%;
+  transition: width 0.5s linear;
+}
+.phase-progress .progress-meta {
+  display: flex; gap: 12px;
+  font-size: 11px; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.phase-progress .progress-meta .spacer { flex: 1; }
+
+.metric-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.metric {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+}
+.metric .label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+.metric .value {
+  font-size: 28px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.metric .unit { font-size: 12px; color: var(--text-tertiary); }
+
+.plot-card {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px;
+  margin-bottom: 16px;
+}
+.plot-card .plot-title {
+  font-size: 12px; color: var(--text-secondary);
+  margin-bottom: 6px; display: flex; gap: 16px; align-items: center;
+}
+.plot-legend { display: flex; gap: 12px; margin-left: auto; font-size: 11px; }
+.plot-legend .lg { display: flex; align-items: center; gap: 4px; color: var(--text-tertiary); }
+.plot-legend .swatch { display: inline-block; width: 16px; height: 2px; }
+.plot-legend .swatch.baseline { background: var(--accent); }
+.plot-legend .swatch.post { background: repeating-linear-gradient(90deg, var(--post-accent) 0 4px, transparent 4px 7px); height: 2px; }
+.plot-svg { width: 100%; height: 220px; display: block; }
+
+/* Two plots side-by-side; collapse to a single column at narrow widths. */
+.plot-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Inline button-group toggle (Y-axis, X-axis) */
+.btn-group {
+  display: inline-flex; border: 1px solid var(--border);
+  border-radius: 4px; overflow: hidden;
+  background: var(--bg-input);
+}
+.btn-group button {
+  background: transparent; border: 0;
+  padding: 3px 9px; font-size: 11px; color: var(--text-secondary);
+  border-right: 1px solid var(--border);
+}
+.btn-group button:last-child { border-right: 0; }
+.btn-group button.on {
+  background: var(--accent); color: white;
+}
+.btn-group button:hover:not(.on) { background: var(--bg-muted); color: var(--text); }
+
+.plot-toggles {
+  display: flex; gap: 10px; align-items: center; margin-left: 16px;
+}
+
+/* Sparkline above metric value */
+.metric.with-spark .spark { display: block; height: 20px; margin-bottom: 2px; }
+.metric .spark path { stroke: var(--accent); stroke-width: 1; fill: none; }
+.metric.with-spark .spark.warn path { stroke: var(--warn); }
+
+/* Penetration-rate sub-line */
+.metric .target {
+  font-size: 11px; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.metric.deviation .value { color: var(--warn); }
+
+/* Fault counter strip */
+.fault-strip {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px;
+  align-items: center;
+}
+.fault-strip .label {
+  font-size: 11px; color: var(--text-tertiary);
+  margin-right: 6px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.fault-pill {
+  display: inline-flex; gap: 6px; align-items: center;
+  font-size: 11px; padding: 3px 9px; border-radius: 999px;
+  background: var(--bg-muted); color: var(--text-tertiary);
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.fault-pill.nonzero { background: var(--warn-dim); color: var(--warn); border-color: var(--warn); }
+.fault-pill.fired   {
+  background: var(--danger-dim); color: var(--danger); border-color: var(--danger);
+  animation: flashpulse 0.6s ease-out;
+}
+@keyframes flashpulse {
+  0%   { box-shadow: 0 0 0 0 var(--danger); }
+  100% { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* Allow operator metric row + engineer metrics to grow */
+.metric-row { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.eng-metrics { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+/* Done screen */
+.done-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.done-header h1 { margin: 0; }
+.quality-pill {
+  font-size: 12px; padding: 4px 10px; border-radius: 999px;
+  font-weight: 600;
+}
+.q-VALID,
+.q-VALID_VALID { background: var(--success-dim); color: var(--success); border: 1px solid var(--success); }
+.q-PARTIAL { background: var(--warn-dim); color: var(--warn); border: 1px solid var(--warn); }
+.q-FAULT { background: var(--danger-dim); color: var(--danger); border: 1px solid var(--danger); }
+.q-UNKNOWN { background: var(--bg-muted); color: var(--text-secondary); border: 1px solid var(--border); }
+
+.quality-explain {
+  font-size: 13px; color: var(--text-secondary);
+  margin: -8px 0 16px 0;
+  line-height: 1.4;
+}
+.quality-explain b { color: var(--text); font-weight: 600; }
+
+.results-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.result-card {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+}
+.result-card .label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+.result-card .value {
+  font-size: 22px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.file-paths {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+  margin-bottom: 16px;
+  font-family: var(--mono); font-size: 12px;
+}
+.file-paths .hdr { color: var(--text-tertiary); font-family: var(--font); margin-bottom: 6px; font-size: 11px; }
+.file-paths code { color: var(--text-secondary); display: block; padding: 1px 0; }
+
+/* ── Engineer view ───────────────────────────────────────── */
+.eng {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px 24px; max-width: 1200px; margin: 0 auto;
+}
+.eng-statusbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.mode-badge {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--bg-muted); color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.mode-OFF      { background: var(--bg-muted);  color: var(--text-tertiary); }
+.mode-STANDBY  { background: var(--info-dim);  color: var(--info); border-color: var(--info); }
+.mode-READY    { background: var(--accent-dim);color: var(--accent-text); border-color: var(--accent); }
+.mode-TESTING  { background: var(--info-dim);  color: var(--info); border-color: var(--info); font-weight: 700; }
+.mode-SAFE     { background: var(--warn-dim);  color: var(--warn); border-color: var(--warn); }
+.mode-FAULT    { background: var(--danger-dim);color: var(--danger); border-color: var(--danger); }
+.eng-statusbar .endpoint {
+  font-family: var(--mono); font-size: 12px; color: var(--text-tertiary);
+}
+.eng-statusbar .spacer { flex: 1; }
+
+.eng-pipeline {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px;
+}
+.pipe-pill {
+  font-size: 12px; padding: 4px 10px; border-radius: 4px;
+  background: var(--bg-muted); color: var(--text-tertiary);
+  border: 1px solid transparent;
+}
+.pipe-pill.past { background: var(--success-dim); color: var(--success); }
+.pipe-pill.current {
+  background: var(--info-dim); color: var(--info);
+  border-color: var(--info); font-weight: 700;
+}
+
+.eng-actions {
+  display: flex; gap: 8px; align-items: center;
+  flex-wrap: wrap;
+}
+.eng-actions .sep {
+  width: 1px; height: 20px;
+  background: var(--border);
+  margin: 0 6px;
+}
+
+/* Manual actuator control (engineer-only) */
+.eng-manual {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px;
+}
+.eng-manual summary {
+  cursor: pointer; font-size: 12px; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.05em; user-select: none;
+}
+.eng-manual .manual-hint {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: none; letter-spacing: 0; margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.eng-manual .manual-hint.allowed { color: var(--success); }
+.eng-manual .manual-hint.blocked { color: var(--warn); }
+.eng-manual .manual-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-top: 10px;
+}
+.eng-manual .manual-group {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px;
+}
+.eng-manual .manual-label {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+}
+.eng-manual .manual-row {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.eng-manual .manual-row label {
+  display: inline-flex; gap: 4px; align-items: center;
+  font-size: 12px; color: var(--text-secondary);
+}
+.eng-manual .manual-row input {
+  width: 72px; padding: 3px 6px;
+  background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px;
+  font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.eng-manual .manual-row .unit {
+  font-size: 11px; color: var(--text-tertiary);
+}
+
+/* Inspector + bitmask panels (engineer view diagnostics) */
+.eng-inspect {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px;
+}
+.eng-inspect summary {
+  cursor: pointer; font-size: 12px; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.05em; user-select: none;
+}
+.eng-inspect .manual-hint {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: none; letter-spacing: 0; margin-left: 6px;
+}
+.hk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 4px 16px;
+  margin-top: 10px;
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+}
+.hk-grid .hk-row {
+  display: contents;
+}
+.hk-grid .hk-key {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.hk-grid .hk-val {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hk-grid .hk-val.warn { color: var(--warn); }
+.hk-grid .hk-empty {
+  color: var(--text-tertiary); font-style: italic;
+  grid-column: 1 / -1;
+}
+
+.bitmask-row {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  margin-top: 10px;
+}
+.bitmask-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px;
+}
+.bitmask-title {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  display: flex; gap: 8px; align-items: baseline;
+}
+.bitmask-title .hex {
+  color: var(--text); font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  text-transform: none; letter-spacing: 0;
+}
+.bitmask-bits {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin: 8px 0;
+}
+.bitmask-bit {
+  display: inline-flex; flex-direction: column; align-items: center;
+  font-size: 10px; color: var(--text-tertiary);
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  min-width: 44px;
+}
+.bitmask-bit .dot {
+  width: 14px; height: 14px; border-radius: 3px;
+  background: var(--bg-muted); border: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+.bitmask-bit.set .dot { background: var(--success); border-color: var(--success); }
+.bitmask-bit.set .label { color: var(--success); }
+.bitmask-bit.warn-bit.set .dot { background: var(--warn); border-color: var(--warn); }
+.bitmask-bit.warn-bit.set .label { color: var(--warn); }
+.bitmask-help {
+  font-size: 11px; color: var(--text-tertiary);
+}
+
+/* cFS files panel */
+.files-toolbar {
+  display: flex; gap: 8px; align-items: center;
+  margin-top: 8px; margin-bottom: 8px;
+}
+.files-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.files-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px;
+}
+.files-card-title {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+.files-list {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+.files-list .file-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 8px; align-items: center;
+  padding: 2px 4px; border-radius: 4px;
+  transition: background 0.1s;
+}
+.files-list .file-row:hover { background: var(--bg-muted); }
+.files-list .file-row .name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files-list .file-row .size { color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+.files-list .file-row .ts   { color: var(--text-tertiary); font-size: 11px; }
+.files-list .file-row .actions { display: flex; gap: 4px; }
+.files-list .file-row .actions button {
+  font-size: 10px; padding: 2px 6px;
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: 3px;
+  cursor: pointer;
+}
+.files-list .file-row .actions button:hover { color: var(--text); border-color: var(--border-strong); }
+.files-list .files-empty { color: var(--text-tertiary); font-style: italic; padding: 4px; }
+
+.files-viewer {
+  margin-top: 10px;
+  display: none;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 480px; overflow: auto;
+}
+.files-viewer.open { display: block; }
+.files-viewer .vw-header {
+  position: sticky; top: 0;
+  display: flex; gap: 8px; align-items: center;
+  padding: 6px 10px;
+  background: var(--bg-elevated); border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text-secondary);
+}
+.files-viewer .vw-header .vw-name {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  color: var(--text); font-weight: 500;
+}
+.files-viewer .vw-header .vw-meta {
+  color: var(--text-tertiary); font-size: 11px;
+  margin-left: auto;
+}
+.files-viewer pre {
+  margin: 0; padding: 8px 10px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 11.5px; line-height: 1.4;
+  white-space: pre-wrap; word-break: break-word;
+  color: var(--text);
+}
+.files-viewer .binary-stub {
+  padding: 12px;
+  font-size: 12px; color: var(--text-secondary);
+}
+
+/* Connection diagnostics */
+.diag-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-top: 10px;
+}
+.diag-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px;
+  font-size: 12px; color: var(--text-secondary);
+}
+.diag-title {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.diag-row {
+  display: flex; justify-content: space-between; gap: 8px;
+  padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+.diag-row span:last-child { color: var(--text); }
+.diag-rates {
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+}
+.diag-rates .rate-row {
+  display: grid; grid-template-columns: 1fr auto auto;
+  gap: 8px; padding: 1px 0;
+  font-variant-numeric: tabular-nums;
+}
+.diag-rates .rate-row .stale {
+  color: var(--warn);
+}
+.diag-rates .diag-empty {
+  color: var(--text-tertiary); font-style: italic;
+}
+
+.eng-metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.eng-metrics .metric { padding: 12px 14px; }
+.eng-metrics .metric .value { font-size: 22px; }
+
+.eng-plot { padding: 10px; }
+.eng-plot svg { height: 180px; }
+
+.eng-log-section {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 0 0 0;
+}
+.eng-log-toolbar {
+  display: flex; gap: 10px; align-items: center;
+  padding: 0 10px 8px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  font-size: 12px; color: var(--text-secondary);
+}
+.eng-log-toolbar .eng-log-title {
+  font-size: 11px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  margin-right: 4px;
+}
+.eng-log-toolbar .lvl-toggle {
+  display: inline-flex; gap: 4px; align-items: center;
+  font-size: 11.5px; cursor: pointer;
+}
+.eng-log-toolbar input[type="search"] {
+  flex: 1; min-width: 100px; max-width: 280px;
+  padding: 3px 8px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px;
+  font-size: 12px;
+}
+.eng-log-toolbar .spacer { flex: 1; }
+.eng-log-toolbar .eng-log-count {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 11px; color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.eng-log-section .eng-log {
+  border: none; border-radius: 0;
+}
+.eng-log {
+  font-family: var(--mono); font-size: 12px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px;
+  height: 220px; overflow-y: auto;
+  padding: 8px 10px;
+}
+.eng-log .ev { padding: 1px 0; }
+.eng-log .ev .t { color: var(--text-tertiary); margin-right: 8px; }
+.eng-log .ev.info  .lvl { color: var(--info); }
+.eng-log .ev.warn  .lvl { color: var(--warn); }
+.eng-log .ev.error .lvl { color: var(--danger); }
+.eng-log .ev .lvl { display: inline-block; width: 56px; }
+
+@media (max-width: 720px) {
+  .card-row { grid-template-columns: 1fr; }
+  .params-form { grid-template-columns: 1fr; }
+  .metric-row, .results-grid, .eng-metrics { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="brand">LRMH</span>
+  <div class="conn" id="conn">
+    <span class="conn-dot"></span>
+    <span class="conn-text">Connecting…</span>
+  </div>
+  <span class="site-pill" id="site-pill">Site 017</span>
+  <span class="spacer"></span>
+  <button class="view-toggle" id="view-toggle">Engineer view</button>
+</header>
+
+<!-- ──────────────────────────────────────────────────────── -->
+<!-- OPERATOR VIEW                                              -->
+<!-- ──────────────────────────────────────────────────────── -->
+<main id="operator">
+
+  <!-- Pick -->
+  <section id="op-pick" class="op-screen active">
+    <div id="op-warning" class="banner view-hidden">
+      <div class="text"></div>
+      <button class="btn btn-primary" id="op-clear-safe">Clear and continue</button>
+    </div>
+
+    <h1>Choose a test</h1>
+    <div class="subtitle">Pick what you want to run on the next site.</div>
+
+    <div class="card-row">
+      <button class="test-card" data-type="cpt">
+        <span class="icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 4 L16 22 M16 22 L13 18 M16 22 L19 18 M8 26 L24 26 M10 28 L22 28"/></svg>
+        </span>
+        <h2>Cone penetration test</h2>
+        <p class="desc">Single drive to target depth at a constant rate.</p>
+        <div class="meta">Tool: cone · ~3 min</div>
+      </button>
+      <button class="test-card" data-type="plate">
+        <span class="icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 22 L26 22 M16 6 L16 22 M9 22 L9 25 M23 22 L23 25 M5 28 L27 28"/><circle cx="16" cy="6" r="2.5"/></svg>
+        </span>
+        <h2>Plate load test</h2>
+        <p class="desc">Load cycles to measure compaction (runs as the full sequence with the cone tip in this release).</p>
+        <div class="meta">Tool: plate · ~6 min</div>
+      </button>
+      <button class="test-card" data-type="full">
+        <span class="icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 6 L13 26 L19 14 L27 26"/><path d="M5 28 L27 28"/></svg>
+        </span>
+        <h2>Full site characterization</h2>
+        <p class="desc">Baseline CPT, load cycles, and post-disturbance CPT.</p>
+        <div class="meta">Tool: cone · ~10 min</div>
+      </button>
+    </div>
+
+    <div class="site-history" id="site-history">
+      <div class="hdr">Recent sites</div>
+      <div class="history-list" id="history-list">
+        <span class="history-empty">none yet — runs will appear here as they complete</span>
+      </div>
+    </div>
+
+    <div class="op-actions">
+      <span></span>
+      <button class="btn" id="op-stow">Stow & shut down</button>
+    </div>
+  </section>
+
+  <!-- Params -->
+  <section id="op-params" class="op-screen">
+    <h1 id="params-title">Test parameters</h1>
+    <div class="subtitle" id="params-subtitle"></div>
+    <div class="preset-row">
+      <label for="preset-pick">Preset:</label>
+      <select id="preset-pick">
+        <option value="">— none (manual entry) —</option>
+      </select>
+      <button class="btn btn-ghost" id="preset-save">Save current as…</button>
+      <button class="btn btn-ghost" id="preset-delete">Delete</button>
+    </div>
+    <div id="params-form-host"></div>
+    <div class="op-actions">
+      <button class="btn btn-ghost" id="params-back">← Back</button>
+      <button class="btn btn-primary" id="params-start">Start test</button>
+    </div>
+  </section>
+
+  <!-- Run -->
+  <section id="op-run" class="op-screen">
+    <h1 id="run-title">Running test</h1>
+    <div class="subtitle" id="run-subtitle"></div>
+
+    <div class="phase-bar">
+      <span class="spinner"></span>
+      <span class="phase-name" id="run-phase-name">Starting…</span>
+      <span class="phase-eta" id="run-phase-eta"></span>
+      <span class="data-flow" id="run-data-flow"
+            title="Telemetry stream status">
+        <span class="dot"></span>
+        <span class="text">no data yet</span>
+      </span>
+      <span class="elapsed" id="run-phase-elapsed">0.0s</span>
+    </div>
+    <div class="phase-progress" id="run-phase-progress">
+      <div class="progress-track"><div class="progress-fill" id="run-progress-fill"></div></div>
+      <div class="progress-meta">
+        <span id="run-progress-text">—</span>
+        <span class="spacer"></span>
+        <span id="run-progress-total">—</span>
+      </div>
+    </div>
+
+    <div class="metric-row">
+      <div class="metric with-spark">
+        <svg class="spark" id="run-force-spark" viewBox="0 0 100 20" preserveAspectRatio="none"></svg>
+        <div class="label">Force</div>
+        <div class="value" id="run-force">—</div>
+        <div class="unit">N</div>
+      </div>
+      <div class="metric">
+        <div class="label">Tip resistance qc</div>
+        <div class="value" id="run-qc">—</div>
+        <div class="unit">MPa</div>
+      </div>
+      <div class="metric">
+        <div class="label">Depth</div>
+        <div class="value" id="run-depth">—</div>
+        <div class="unit">cm</div>
+      </div>
+      <div class="metric with-spark">
+        <svg class="spark" id="run-motor-spark" viewBox="0 0 100 20" preserveAspectRatio="none"></svg>
+        <div class="label">Motor current</div>
+        <div class="value" id="run-motor">—</div>
+        <div class="unit">A</div>
+      </div>
+      <div class="metric" id="run-pen-card">
+        <div class="label">Penetration rate</div>
+        <div class="value" id="run-pen">—</div>
+        <div class="unit">mm/s</div>
+        <div class="target" id="run-pen-target">→ 20</div>
+      </div>
+    </div>
+
+    <div class="plot-row">
+      <div class="plot-card">
+        <div class="plot-title">
+          <span id="run-plot-force-title">Force vs depth</span>
+          <span class="plot-toggles">
+            <span class="btn-group" data-axis="x" data-target="force">
+              <button data-mode="depth" class="on">Depth</button>
+              <button data-mode="time">Time</button>
+            </span>
+          </span>
+          <span class="plot-legend">
+            <span class="lg"><span class="swatch baseline"></span>Baseline</span>
+            <span class="lg view-hidden" id="run-legend-force-post"><span class="swatch post"></span>Post</span>
+          </span>
+        </div>
+        <svg id="run-plot-force" class="plot-svg" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="plot-card">
+        <div class="plot-title">
+          <span id="run-plot-qc-title">qc vs depth</span>
+          <span class="plot-toggles">
+            <span class="btn-group" data-axis="x" data-target="qc">
+              <button data-mode="depth" class="on">Depth</button>
+              <button data-mode="time">Time</button>
+            </span>
+          </span>
+          <span class="plot-legend">
+            <span class="lg"><span class="swatch baseline"></span>Baseline</span>
+            <span class="lg view-hidden" id="run-legend-qc-post"><span class="swatch post"></span>Post</span>
+          </span>
+        </div>
+        <svg id="run-plot-qc" class="plot-svg" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+      </div>
+    </div>
+
+    <div class="op-actions">
+      <span></span>
+      <button class="btn btn-danger" id="run-abort">Abort</button>
+    </div>
+  </section>
+
+  <!-- Done -->
+  <section id="op-done" class="op-screen">
+    <div class="done-header">
+      <h1 id="done-title">Test complete</h1>
+      <span class="quality-pill q-UNKNOWN" id="done-quality">—</span>
+    </div>
+    <div class="quality-explain" id="done-quality-explain"></div>
+
+    <div class="results-grid" id="done-results"></div>
+
+    <div class="file-paths">
+      <div class="hdr">Files written</div>
+      <code id="done-file-quicklook">cf/lrmh/data/lrmh_site_&lt;time&gt;.bin</code>
+      <code id="done-file-summary">cf/lrmh/reports/lrmh_human_&lt;time&gt;.txt</code>
+    </div>
+
+    <div class="op-actions">
+      <button class="btn" id="done-stow">Stow & shut down</button>
+      <button class="btn btn-primary" id="done-again">Run another test</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ──────────────────────────────────────────────────────── -->
+<!-- ENGINEER VIEW                                              -->
+<!-- ──────────────────────────────────────────────────────── -->
+<div id="engineer" class="view-hidden">
+<main class="eng">
+
+  <div class="eng-statusbar">
+    <span class="brand">LRMH</span>
+    <span class="mode-badge mode-OFF" id="eng-mode">OFF</span>
+    <span style="color: var(--text-tertiary); font-size: 12px;">
+      site <span id="eng-site" style="color: var(--text); font-variant-numeric: tabular-nums;">017</span>
+    </span>
+    <span class="endpoint" id="eng-endpoint">udp 127.0.0.1:1234</span>
+    <span class="spacer"></span>
+    <button class="btn btn-danger" id="eng-abort">Abort</button>
+  </div>
+
+  <div class="eng-pipeline" id="eng-pipeline">
+    <span class="pipe-pill" data-state="0">Idle</span>
+    <span class="pipe-pill" data-state="1">Precheck</span>
+    <span class="pipe-pill" data-state="2">Position</span>
+    <span class="pipe-pill" data-state="3">Base pen</span>
+    <span class="pipe-pill" data-state="4">Load ramp</span>
+    <span class="pipe-pill" data-state="5">Repeat</span>
+    <span class="pipe-pill" data-state="6">Post pen</span>
+    <span class="pipe-pill" data-state="8">Proc</span>
+    <span class="pipe-pill" data-state="9">Report</span>
+  </div>
+
+  <div class="eng-actions">
+    <button class="btn" id="eng-init">Init</button>
+    <button class="btn" id="eng-deploy">Deploy</button>
+    <button class="btn" id="eng-stow">Stow</button>
+    <span class="sep"></span>
+    <button class="btn" data-preset="cpt">Standard baseline</button>
+    <button class="btn" data-preset="cpt-quick">Quick survey</button>
+    <button class="btn" data-preset="full">Deep characterization</button>
+  </div>
+
+  <details class="eng-manual" id="eng-manual">
+    <summary>
+      Manual actuator control
+      <span class="manual-hint" id="manual-hint">— sequencer phase IDLE only</span>
+    </summary>
+    <div class="manual-grid">
+      <div class="manual-group">
+        <div class="manual-label">Position move</div>
+        <div class="manual-row">
+          <label>target <input type="number" id="manual-move-pos" step="0.005" value="0.05" min="0" max="0.40"><span class="unit">m</span></label>
+          <label>rate <input type="number" id="manual-move-rate" step="0.001" value="0.005" min="0.0001" max="0.05"><span class="unit">m/s</span></label>
+          <button class="btn" id="manual-move">Move</button>
+        </div>
+      </div>
+      <div class="manual-group">
+        <div class="manual-label">Force-mode push</div>
+        <div class="manual-row">
+          <label>target <input type="number" id="manual-force-n" step="10" value="50" min="0" max="1500"><span class="unit">N</span></label>
+          <label>rate <input type="number" id="manual-force-rate" step="0.001" value="0.003" min="0.0001" max="0.05"><span class="unit">m/s</span></label>
+          <button class="btn btn-danger" id="manual-force">Force push</button>
+        </div>
+      </div>
+      <div class="manual-group">
+        <div class="manual-label">Discrete</div>
+        <div class="manual-row">
+          <button class="btn" id="manual-retract">Retract</button>
+          <button class="btn" id="manual-hold">Hold</button>
+          <button class="btn btn-danger" id="manual-estop">E-STOP</button>
+          <button class="btn" id="manual-clear-estop">Clear e-stop</button>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="eng-inspect" id="eng-hk-inspect">
+    <summary>HK packet inspector <span class="manual-hint">— all fields from the latest HK</span></summary>
+    <div class="hk-grid" id="hk-grid">
+      <span class="hk-empty">Waiting for HK packet…</span>
+    </div>
+  </details>
+
+  <details class="eng-inspect" id="eng-bitmasks">
+    <summary>Bitmask decoders <span class="manual-hint">— channel valid + HAL flags</span></summary>
+    <div class="bitmask-row">
+      <div class="bitmask-card">
+        <div class="bitmask-title">
+          sensorChannelValid <span id="ch-valid-hex" class="hex">—</span>
+        </div>
+        <div class="bitmask-bits" id="ch-valid-bits"></div>
+        <div class="bitmask-help">
+          One bit per sensor channel; 1 = sample fresh + within range.
+          Stale channels (long sensor freshness window) clear their bit
+          per ADR-0005.
+        </div>
+      </div>
+      <div class="bitmask-card">
+        <div class="bitmask-title">
+          halFlags <span id="hal-flags-hex" class="hex">—</span>
+        </div>
+        <div class="bitmask-bits" id="hal-flags-bits"></div>
+        <div class="bitmask-help">
+          LRMH_HAL_FLAG_* bits. ESTOP = e-stop active; FAULT = HAL
+          self-fault; HOMING = retract in progress; CALIBRATING = HAL
+          self-test; OVERTEMP = thermal soft-stop.
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="eng-inspect" id="eng-files">
+    <summary>cFS files <span class="manual-hint" id="files-cf-dir">— /cf/lrmh/data + /cf/lrmh/reports</span></summary>
+    <div class="files-toolbar">
+      <button class="btn btn-ghost" id="files-refresh">↻ Refresh listing</button>
+    </div>
+    <div class="files-grid">
+      <div class="files-card">
+        <div class="files-card-title">reports/</div>
+        <div class="files-list" id="files-reports">
+          <span class="files-empty">click Refresh listing</span>
+        </div>
+      </div>
+      <div class="files-card">
+        <div class="files-card-title">data/</div>
+        <div class="files-list" id="files-data">
+          <span class="files-empty">click Refresh listing</span>
+        </div>
+      </div>
+    </div>
+    <div class="files-viewer" id="files-viewer"></div>
+  </details>
+
+  <details class="eng-inspect" id="eng-diag">
+    <summary>Connection diagnostics <span class="manual-hint">— TLM rate, RTT, staleness</span></summary>
+    <div class="diag-grid">
+      <div class="diag-card">
+        <div class="diag-title">WebSocket</div>
+        <div class="diag-row"><span>State:</span><span id="diag-ws-state">—</span></div>
+        <div class="diag-row"><span>Endpoint:</span><span id="diag-endpoint">—</span></div>
+        <div class="diag-row"><span>Round-trip:</span><span id="diag-rtt">—</span></div>
+        <div class="diag-row"><button class="btn" id="diag-ping">Ping (NOOP)</button></div>
+      </div>
+      <div class="diag-card">
+        <div class="diag-title">TLM rate (5s rolling)</div>
+        <div id="diag-rates" class="diag-rates">
+          <span class="diag-empty">no data yet</span>
+        </div>
+      </div>
+      <div class="diag-card">
+        <div class="diag-title">Lifetime totals</div>
+        <div class="diag-row"><span>Messages:</span><span id="diag-total">0</span></div>
+        <div class="diag-row"><span>Uptime:</span><span id="diag-uptime">0s</span></div>
+        <div class="diag-row"><span>Reconnects:</span><span id="diag-reconn">0</span></div>
+      </div>
+    </div>
+  </details>
+
+  <details class="eng-manual" id="eng-raw">
+    <summary>
+      Raw command sender <span class="manual-hint">— arbitrary MID + CC + payload (engineer escape hatch)</span>
+    </summary>
+    <div class="manual-grid">
+      <div class="manual-group">
+        <div class="manual-label">CCSDS command</div>
+        <div class="manual-row">
+          <label>MID <input type="text" id="raw-mid" value="0x18A0" placeholder="0x18A0"></label>
+          <label>CC <input type="number" id="raw-cc" min="0" max="255" value="0"></label>
+          <button class="btn btn-danger" id="raw-send">Send</button>
+        </div>
+        <div class="manual-row" style="margin-top:6px;">
+          <label style="flex:1;">Payload (hex, optional)
+            <input type="text" id="raw-payload" placeholder="e.g. 11000000  (leave blank for no body)"
+                   style="flex:1; min-width: 240px;">
+          </label>
+        </div>
+        <div class="bitmask-help" style="margin-top:6px;">
+          Bridge does <b>not</b> validate MID or CC. Use this only when the
+          typed routes above don't cover what you need; double-check
+          against <code>apps/lrmh_*/fsw/inc/lrmh_*_msg.h</code>.
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="eng-manual" id="eng-inject">
+    <summary>
+      Fault injection <span class="manual-hint sim-only">— sim only; no-op on bench/flight</span>
+    </summary>
+    <div class="manual-grid">
+      <div class="manual-group">
+        <div class="manual-label">Force / current</div>
+        <div class="manual-row">
+          <button class="btn btn-danger" data-inject="force-sat">Force saturation</button>
+          <button class="btn btn-danger" data-inject="force-rate">Force rate</button>
+          <button class="btn btn-danger" data-inject="overcurrent">Overcurrent</button>
+        </div>
+      </div>
+      <div class="manual-group">
+        <div class="manual-label">Mechanical / environmental</div>
+        <div class="manual-row">
+          <button class="btn btn-danger" data-inject="hard-stop">Hard stop</button>
+          <button class="btn btn-danger" data-inject="thermal">Thermal</button>
+          <button class="btn btn-danger" data-inject="bus-voltage">Bus voltage</button>
+        </div>
+      </div>
+      <div class="manual-group">
+        <div class="manual-label">Clear</div>
+        <div class="manual-row">
+          <button class="btn" id="inject-clear">Clear injection</button>
+          <span style="font-size:11px; color: var(--text-tertiary);">
+            persists until cleared
+          </span>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="fault-strip" id="eng-fault-strip">
+    <span class="label">Fault counters</span>
+    <span class="fault-pill" id="fc-tier"     title="Most recent recovery tier">tier <b>0</b></span>
+    <span class="fault-pill" id="fc-timeout"  title="Sensor-timeout escalations">timeouts <b>0</b></span>
+    <span class="fault-pill" id="fc-t1"       title="Total T1 (RESUME) recoveries">T1 <b>0</b></span>
+    <span class="fault-pill" id="fc-t2"       title="Total T2 (SKIP_SITE) recoveries">T2 <b>0</b></span>
+    <span class="fault-pill" id="fc-t3"       title="Total T3 (SAFE) recoveries">T3 <b>0</b></span>
+  </div>
+
+  <div class="eng-metrics">
+    <div class="metric with-spark">
+      <svg class="spark" id="eng-force-spark" viewBox="0 0 100 20" preserveAspectRatio="none"></svg>
+      <div class="label">Force</div>
+      <div class="value" id="eng-force">—</div>
+      <div class="unit">N</div>
+    </div>
+    <div class="metric">
+      <div class="label">Tip resistance qc</div>
+      <div class="value" id="eng-qc">—</div>
+      <div class="unit">MPa</div>
+    </div>
+    <div class="metric"><div class="label">Depth</div><div class="value" id="eng-depth">—</div><div class="unit">cm</div></div>
+    <div class="metric with-spark">
+      <svg class="spark" id="eng-motor-spark" viewBox="0 0 100 20" preserveAspectRatio="none"></svg>
+      <div class="label">Motor current</div>
+      <div class="value" id="eng-motor">—</div>
+      <div class="unit">A</div>
+    </div>
+    <div class="metric" id="eng-pen-card">
+      <div class="label">Penetration rate</div>
+      <div class="value" id="eng-pen">—</div>
+      <div class="unit">mm/s</div>
+      <div class="target" id="eng-pen-target">→ 20</div>
+    </div>
+    <div class="metric"><div class="label">Temperature</div><div class="value" id="eng-temp">—</div><div class="unit">°C</div></div>
+    <div class="metric"><div class="label">Bus voltage</div><div class="value" id="eng-busv">—</div><div class="unit">V</div></div>
+  </div>
+
+  <div class="plot-row">
+    <div class="plot-card eng-plot">
+      <div class="plot-title">
+        <span id="eng-plot-force-title">Force vs depth</span>
+        <span class="plot-toggles">
+          <span class="btn-group" data-axis="x" data-target="force">
+            <button data-mode="depth" class="on">Depth</button>
+            <button data-mode="time">Time</button>
+          </span>
+        </span>
+        <span class="plot-legend">
+          <span class="lg"><span class="swatch baseline"></span>Baseline</span>
+          <span class="lg view-hidden" id="eng-legend-force-post"><span class="swatch post"></span>Post</span>
+        </span>
+      </div>
+      <svg id="eng-plot-force" class="plot-svg" viewBox="0 0 800 180" preserveAspectRatio="none"></svg>
+    </div>
+    <div class="plot-card eng-plot">
+      <div class="plot-title">
+        <span id="eng-plot-qc-title">qc vs depth</span>
+        <span class="plot-toggles">
+          <span class="btn-group" data-axis="x" data-target="qc">
+            <button data-mode="depth" class="on">Depth</button>
+            <button data-mode="time">Time</button>
+          </span>
+        </span>
+        <span class="plot-legend">
+          <span class="lg"><span class="swatch baseline"></span>Baseline</span>
+          <span class="lg view-hidden" id="eng-legend-qc-post"><span class="swatch post"></span>Post</span>
+        </span>
+      </div>
+      <svg id="eng-plot-qc" class="plot-svg" viewBox="0 0 800 180" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+
+  <div class="eng-log-section">
+    <div class="eng-log-toolbar">
+      <span class="eng-log-title">Event log</span>
+      <label class="lvl-toggle"><input type="checkbox" id="log-show-info"  checked>info</label>
+      <label class="lvl-toggle"><input type="checkbox" id="log-show-warn"  checked>warn</label>
+      <label class="lvl-toggle"><input type="checkbox" id="log-show-error" checked>error</label>
+      <input type="search" id="log-search" placeholder="filter…">
+      <span class="spacer"></span>
+      <span id="log-count" class="eng-log-count">0 / 0</span>
+      <button class="btn btn-ghost" id="log-export">Export JSONL</button>
+      <button class="btn btn-ghost" id="log-clear">Clear</button>
+    </div>
+    <div class="eng-log" id="eng-log"></div>
+  </div>
+
+</main>
+</div>
+
+<script>
+"use strict";
+
+// ────────────────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────────────────
+const state = {
+  view: localStorage.getItem("lrmh_ui_view") || "operator",
+  screen: "pick",                    // operator pick|params|run|done
+  ws: null,
+  connected: false,
+  cfsHost: "127.0.0.1",
+  ciPort: 1234,
+  // Latest HK
+  mode: null, modeName: "?", seqState: 0, seqStateName: "IDLE",
+  faultState: 0, faultFlags: 0, busVoltage: null,
+  // Latest sense values
+  force: null, depth: null, motorCurrent: null, temperature: null,
+  // Penetration rate (smoothed mm/s) and previous-sample memo
+  penRate_mmps: 0,
+  _prevSenseDepth_m: null,
+  _prevSenseT_s: null,
+  // Test in progress. Samples are now objects:
+  //   { d_cm, f_n, t_s, i_a }
+  currentTest: null,
+  baselineSamples: [],
+  postSamples: [],
+  inPostPhase: false,
+  phaseStartedAtMs: null,
+  testStartedAtMs: null,             // wall-clock t=0 for the X-axis 'time' mode
+  // Phase-change markers for the plot.
+  //   [{ phase_name, d_cm, t_s }, ...]
+  phaseMarkers: [],
+  // Latch for end-of-test detection. Survives the HK/seq_status race
+  // where HK at 1 Hz can overwrite state.seqState before the
+  // seq_status transition packet is observed.
+  _wasInActivePhase: false,
+  // Per-plot X-axis modes (force-vs-X and qc-vs-X are independent
+  // plots now, each with its own depth/time toggle).
+  plot: {
+    xAxisForce: localStorage.getItem("lrmh_plot_x_force") || "depth",
+    xAxisQc:    localStorage.getItem("lrmh_plot_x_qc")    || "depth",
+  },
+  // Sparkline ring buffers (last N motor + force values).
+  sparkMotor: [],
+  sparkForce: [],
+  // Fault counter cache (engineer strip).
+  faultCounts: { tier: 0, timeout: 0, t1: 0, t2: 0, t3: 0 },
+  // Site result
+  lastSiteResult: null,
+  // Site IDs
+  siteId: parseInt(localStorage.getItem("lrmh_site_id") || "17", 10),
+  // Event log (engineer view)
+  events: [],
+  logAutoScroll: true,
+};
+
+// Cone tip cross-section for converting Force_N → qc (Pa). Values are
+// the projected base area of the cone tip in m². The standard
+// terrestrial CPT cone is 10 cm² (1e-3 m²); the LRMH cones are
+// placeholders here — replace with real numbers once the cone specs
+// are finalized.
+const CONE_TIP_AREA_M2 = {
+  1: 5.0e-4,   // ToolId 1 = "Cone 30°" — sharper, smaller, placeholder
+  2: 5.0e-3,   // ToolId 2 = "Plate 80mm" — qc not physically meaningful for plate
+  3: 1.0e-3,   // ToolId 3 = "Cone 60°" — standard CPT 10 cm² geometry
+};
+const SPARK_LEN = 60;       // ~0.6 s of sense at 100 Hz
+const PEN_RATE_TARGET = 20; // mm/s, ASTM D5778
+
+// ────────────────────────────────────────────────────────────
+// FSW → UI mappings
+// ────────────────────────────────────────────────────────────
+const PHASE_LABEL = {
+  0: "Idle",
+  1: "Precheck",
+  2: "Positioning",
+  3: "Penetrating",
+  4: "Load ramp",
+  5: "Repeat load cycles",
+  6: "Post-disturbance CPT",
+  7: "Optional traction",
+  8: "Processing",
+  9: "Writing report",
+  11: "Fault",
+  12: "Safe",
+};
+
+const TEST_NAME = {
+  cpt:   "Cone penetration test",
+  plate: "Plate load test",
+  full:  "Full site characterization",
+};
+
+// ────────────────────────────────────────────────────────────
+// DOM helpers
+// ────────────────────────────────────────────────────────────
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => root.querySelectorAll(sel);
+
+function show(el) { el.classList.remove("view-hidden"); }
+function hide(el) { el.classList.add("view-hidden"); }
+function pad3(n) { return String(n).padStart(3, "0"); }
+
+// ────────────────────────────────────────────────────────────
+// View + screen switching
+// ────────────────────────────────────────────────────────────
+function setView(name) {
+  state.view = name;
+  localStorage.setItem("lrmh_ui_view", name);
+  if (name === "operator") {
+    show($("#operator")); hide($("#engineer"));
+    $("#view-toggle").textContent = "Engineer view";
+  } else {
+    hide($("#operator")); show($("#engineer"));
+    $("#view-toggle").textContent = "Operator view";
+  }
+}
+
+function setScreen(name) {
+  state.screen = name;
+  $$(".op-screen").forEach(el => el.classList.remove("active"));
+  $(`#op-${name}`).classList.add("active");
+  if (name === "params" && state.currentTest) {
+    populatePresetDropdown(state.currentTest.type);
+    const sel = $("#preset-pick"); if (sel) sel.value = "";
+  }
+  if (name === "pick") renderSiteHistory();
+}
+
+// ────────────────────────────────────────────────────────────
+// WebSocket
+// ────────────────────────────────────────────────────────────
+function connect() {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const url = `${proto}//${location.host}/ws`;
+  try {
+    state.ws = new WebSocket(url);
+  } catch (e) {
+    appendEvent("error", "WebSocket constructor failed: " + e.message);
+    setTimeout(connect, 2000);
+    return;
+  }
+  state.ws.onopen = () => {
+    state.connected = true;
+    noteReconnect();
+    renderConnection();
+    appendEvent("info", "Bridge connection open.");
+    // Pull saved presets + recent history. Both are bridge-side
+    // JSON files in ground/state/, not browser localStorage.
+    send("presets_load");
+    send("history_load");
+  };
+  state.ws.onclose = () => {
+    state.connected = false;
+    renderConnection();
+    appendEvent("warn", "Bridge connection closed; retrying…");
+    setTimeout(connect, 2000);
+  };
+  state.ws.onerror = () => {
+    appendEvent("error", "Bridge WebSocket error.");
+  };
+  state.ws.onmessage = ev => {
+    try { handleMessage(JSON.parse(ev.data)); }
+    catch (e) { console.error("bad message", ev.data, e); }
+  };
+}
+
+function send(cmd, extra = {}) {
+  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+    appendEvent("warn", `Cannot send '${cmd}': not connected.`);
+    return false;
+  }
+  state.ws.send(JSON.stringify({ cmd, ...extra }));
+  return true;
+}
+
+// ────────────────────────────────────────────────────────────
+// Message dispatch
+// ────────────────────────────────────────────────────────────
+function handleMessage(m) {
+  if (m.type === "connected") {
+    state.cfsHost = m.cfsHost || state.cfsHost;
+    state.ciPort  = m.ciPort  || state.ciPort;
+    $("#eng-endpoint").textContent = `udp ${state.cfsHost}:${state.ciPort}`;
+  }
+  if (m.tlm)                   bumpDiag(m.tlm);
+  if (m.tlm === "hk")          handleHk(m);
+  else if (m.tlm === "sense")  handleSense(m);
+  else if (m.tlm === "seq_status") handleSeqStatus(m);
+  else if (m.tlm === "site_result") handleSiteResult(m);
+  else if (m.tlm === "fault")  handleFault(m);
+  else if (m.tlm === "presets") handlePresets(m);
+  else if (m.tlm === "site_history") handleSiteHistory(m);
+  else if (m.tlm === "fs_list") handleFsList(m);
+  else if (m.tlm === "fs_fetch") handleFsFetch(m);
+  if (m.event)                 appendEvent(m.event, m.text || "");
+  if (m.ack)                   handleAck(m);
+}
+
+function handleHk(m) {
+  state.mode = m.mode; state.modeName = m.modeName;
+  state.seqState = m.seqState; state.seqStateName = m.seqStateName;
+  state.faultState = m.faultState;
+  if (m.busVoltage != null) state.busVoltage = m.busVoltage;
+  state.lastHk = m;
+  renderMode();
+  renderPipeline();
+  renderMetrics();
+  renderHkInspector(m);
+  renderBitmasks(m);
+  // End-of-test latch — same logic as seq_status. Whichever arrives
+  // first wins; subsequent observations are no-ops because Done flips
+  // currentTest off (well, the screen) so the condition can't fire
+  // twice.
+  checkEndOfTest(m.seqState);
+  if (state.screen === "pick") maybeShowSafeBanner();
+}
+
+function checkEndOfTest(phase) {
+  if (phase >= 1 && phase <= 9) {
+    state._wasInActivePhase = true;
+  } else if (phase === 0
+             && state._wasInActivePhase
+             && state.currentTest
+             && state.screen === "run") {
+    state._wasInActivePhase = false;
+    showDoneScreen({});
+  }
+}
+
+function handleSense(m) {
+  if (m.force != null)   state.force = m.force;
+  if (m.depth != null)   state.depth = m.depth;
+  if (m.current != null) state.motorCurrent = m.current;
+  if (m.temp != null)    state.temperature = m.temp;
+
+  // Penetration rate: smoothed dDepth/dt, mm/s.
+  if (m.depth != null && m.t != null) {
+    if (state._prevSenseDepth_m != null && state._prevSenseT_s != null) {
+      const dT = m.t - state._prevSenseT_s;
+      if (dT > 1e-6) {
+        const inst_mmps = ((m.depth - state._prevSenseDepth_m) * 1000.0) / dT;
+        // EMA, α=0.05 → ~20-sample time constant ≈ 0.2 s at 100 Hz.
+        state.penRate_mmps = 0.95 * state.penRate_mmps + 0.05 * inst_mmps;
+      }
+    }
+    state._prevSenseDepth_m = m.depth;
+    state._prevSenseT_s = m.t;
+  }
+
+  // Sparkline ring buffers.
+  if (m.force != null) {
+    state.sparkForce.push(m.force);
+    if (state.sparkForce.length > SPARK_LEN) state.sparkForce.shift();
+  }
+  if (m.current != null) {
+    state.sparkMotor.push(m.current);
+    if (state.sparkMotor.length > SPARK_LEN) state.sparkMotor.shift();
+  }
+
+  renderMetrics();
+  renderSparklines();
+
+  // During a test, push samples to plot.
+  if (state.currentTest && m.depth != null && m.force != null) {
+    const t_s = state.testStartedAtMs != null
+      ? (Date.now() - state.testStartedAtMs) / 1000.0
+      : 0;
+    const sample = {
+      d_cm: m.depth * 100.0,
+      f_n: m.force,
+      t_s,
+      i_a: m.current != null ? m.current : null,
+    };
+    if (state.inPostPhase) state.postSamples.push(sample);
+    else state.baselineSamples.push(sample);
+    renderPlot();
+  }
+}
+
+function handleSeqStatus(m) {
+  const newState = m.seqState;
+  const prev = state.seqState;
+  if (newState !== prev) {
+    state.phaseStartedAtMs = Date.now();
+  }
+  state.seqState = newState;
+  state.seqStateName = m.seqStateName;
+  renderPipeline();
+  renderRunPhase();
+
+  // Capture phase markers for the plot whenever the phase changes
+  // (and we're inside a running test).
+  if (state.currentTest && newState !== prev) {
+    const t_s = state.testStartedAtMs != null
+      ? (Date.now() - state.testStartedAtMs) / 1000.0
+      : 0;
+    state.phaseMarkers.push({
+      phase: m.seqStateName || String(newState),
+      d_cm: state.depth != null ? state.depth * 100.0 : 0,
+      t_s,
+    });
+    renderPlot();
+  }
+
+  // Detect post-disturbance phase entry to switch plot trace
+  if (m.seqStateName === "POST_PEN" && !state.inPostPhase) {
+    state.inPostPhase = true;
+    for (const sel of ["#run-legend-force-post", "#run-legend-qc-post",
+                       "#eng-legend-force-post", "#eng-legend-qc-post"]) {
+      const el = $(sel); if (el) show(el);
+    }
+  }
+
+  // If we transitioned into a phase that implies the test has begun,
+  // and we're sitting on the params screen, advance to the run screen.
+  if (state.currentTest && state.screen === "params"
+      && newState >= 1 && newState <= 9) {
+    setScreen("run");
+  }
+
+  // End-of-test detection. The FSW phase enum has no COMPLETE; IDLE
+  // is the "test finished" signal. Use a latched flag rather than a
+  // direct prev/new check because HK at 1 Hz can race seq_status and
+  // overwrite state.seqState before the transition is observed.
+  checkEndOfTest(newState);
+}
+
+function handleSiteResult(m) {
+  state.lastSiteResult = m;
+}
+
+function handleFault(m) {
+  state.faultFlags = m.faultFlags ?? m.errorFlags ?? 0;
+  // 2.0 fault TLM: timeoutCount + T1/T2/T3 escalation totals + tier.
+  const next = {
+    tier:    m.recoveryTier ?? 0,
+    timeout: m.timeoutCount ?? 0,
+    t1:      m.totalT1Events ?? 0,
+    t2:      m.totalT2Events ?? 0,
+    t3:      m.totalT3Events ?? 0,
+  };
+  const fired = [];
+  for (const k of Object.keys(next)) {
+    // tier is a *level*, not a monotonic counter. Skip the
+    // "fired" highlight for it.
+    if (k !== "tier" && next[k] > state.faultCounts[k]) fired.push(k);
+  }
+  state.faultCounts = next;
+  renderFaultStrip(fired);
+}
+
+function handleAck(m) {
+  // RTT measurement for the diagnostics ping. The ping button sends
+  // `noop`, which the bridge forwards to cFS; the resulting ack is
+  // {ack:"noop", ok:true}. Round-trip = browser → bridge → cFS →
+  // bridge → browser, so it covers WS + UDP + cFS scheduler + back.
+  if (m.ack === "noop" && state.diag && state.diag.ping.sentMs != null) {
+    state.diag.ping.rttMs = performance.now() - state.diag.ping.sentMs;
+    state.diag.ping.sentMs = null;
+  }
+  if (m.ack === "ensure_ready") {
+    if (m.ok) {
+      // Drive the next stage of whichever flow we kicked off.
+      if (state.pendingFlow === "open-params") {
+        setScreen("params");
+      } else if (state.pendingFlow === "send-start") {
+        sendStartTest();
+      }
+      state.pendingFlow = null;
+    } else {
+      appendEvent("error", `Could not ready instrument: ${m.reason || "unknown"}`);
+      state.pendingFlow = null;
+      setScreen("pick");
+    }
+  } else if (m.ack === "start_test") {
+    if (m.ok) {
+      // Wait for seq_status to advance to a real phase before flipping
+      // the screen — handled by handleSeqStatus.
+      // Also handle the case where we're already past it (rare).
+      if (state.currentTest) setScreen("run");
+    }
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// Renderers
+// ────────────────────────────────────────────────────────────
+function renderConnection() {
+  const el = $("#conn");
+  if (state.connected) {
+    el.classList.add("ok");
+    $(".conn-text", el).textContent = "Connected";
+  } else {
+    el.classList.remove("ok");
+    $(".conn-text", el).textContent = "Connecting…";
+  }
+  renderManualCtrlAvailability();
+}
+
+function renderMode() {
+  const badge = $("#eng-mode");
+  const name = state.modeName || "?";
+  badge.textContent = name;
+  badge.className = "mode-badge mode-" + name;
+}
+
+function renderPipeline() {
+  const cur = state.seqState;
+  // FAULT (11) / SAFE (12) aren't part of the normal pipeline; clear
+  // all marks rather than mis-coloring every pill as "past".
+  const inAnomaly = cur === 11 || cur === 12;
+  $$(".pipe-pill").forEach(p => {
+    const s = parseInt(p.dataset.state, 10);
+    p.classList.remove("past", "current");
+    if (inAnomaly) return;
+    if (s === cur) p.classList.add("current");
+    else if (cur > s) p.classList.add("past");
+  });
+  renderManualCtrlAvailability();
+}
+
+function renderMetrics() {
+  const depth_cm = state.depth != null ? state.depth * 100 : null;
+  const force_n  = fmt(state.force, 1);
+  const qc_mpa   = fmt(forceToQcMPa(state.force), 2);
+
+  // Engineer view metrics
+  $("#eng-force").textContent  = force_n;
+  $("#eng-qc").textContent     = qc_mpa;
+  $("#eng-depth").textContent  = fmt(depth_cm, 1);
+  $("#eng-motor").textContent  = fmt(state.motorCurrent, 2);
+  $("#eng-temp").textContent   = fmt(state.temperature, 1);
+  $("#eng-busv").textContent   = fmt(state.busVoltage, 2);
+  $("#eng-pen").textContent    = fmtPen(state.penRate_mmps);
+  applyPenDeviation($("#eng-pen-card"));
+
+  // Run screen metrics
+  if (state.screen === "run") {
+    $("#run-force").textContent = force_n;
+    $("#run-qc").textContent    = qc_mpa;
+    $("#run-depth").textContent = fmt(depth_cm, 1);
+    $("#run-motor").textContent = fmt(state.motorCurrent, 2);
+    $("#run-pen").textContent   = fmtPen(state.penRate_mmps);
+    applyPenDeviation($("#run-pen-card"));
+  }
+}
+
+function forceToQcMPa(force_n) {
+  if (force_n == null || Number.isNaN(force_n)) return null;
+  const tool = (state.currentTest && state.currentTest.params.tool_id) || 1;
+  const area = CONE_TIP_AREA_M2[tool] || CONE_TIP_AREA_M2[1];
+  return (force_n / area) / 1e6;
+}
+
+function fmtPen(rate) {
+  if (rate == null || Number.isNaN(rate)) return "—";
+  // Display 0 below 0.5 mm/s to suppress noise jitter when stationary.
+  if (Math.abs(rate) < 0.5) return "0.0";
+  return rate.toFixed(1);
+}
+function applyPenDeviation(card) {
+  if (!card) return;
+  const r = state.penRate_mmps;
+  // Highlight when actual deviates >50% from target *and* the
+  // instrument is actually trying to penetrate (we're in a phase
+  // where motion is expected). Cheap proxy: only flag if in phase 3.
+  const inDriving = state.seqState === 3;
+  const deviates = inDriving && Math.abs(r - PEN_RATE_TARGET) > 0.5 * PEN_RATE_TARGET;
+  card.classList.toggle("deviation", deviates);
+}
+
+function renderSparklines() {
+  drawSpark("#run-motor-spark",  state.sparkMotor,  /*highSpike*/ 1.5);
+  drawSpark("#eng-motor-spark",  state.sparkMotor,  1.5);
+  drawSpark("#run-force-spark",  state.sparkForce,  null);
+  drawSpark("#eng-force-spark",  state.sparkForce,  null);
+}
+
+function drawSpark(sel, samples, warnIfMaxExceeds) {
+  const svg = $(sel);
+  if (!svg) return;
+  if (samples.length < 2) { svg.innerHTML = ""; return; }
+  const maxV = Math.max(...samples, 0);
+  const minV = Math.min(...samples, 0);
+  const range = Math.max(1e-6, maxV - minV);
+  const W = 100, H = 20;
+  const stepX = W / (samples.length - 1);
+  const path = samples.map((v, i) => {
+    const x = (i * stepX).toFixed(2);
+    const y = (H - ((v - minV) / range) * (H - 2) - 1).toFixed(2);
+    return (i === 0 ? "M" : "L") + x + "," + y;
+  }).join(" ");
+  const cls = warnIfMaxExceeds != null && maxV > warnIfMaxExceeds ? "warn" : "";
+  svg.classList.toggle("warn", !!cls);
+  svg.innerHTML = `<path d="${path}"/>`;
+}
+
+function renderFaultStrip(firedKeys = []) {
+  const map = {
+    tier:    "#fc-tier",
+    timeout: "#fc-timeout",
+    t1:      "#fc-t1",
+    t2:      "#fc-t2",
+    t3:      "#fc-t3",
+  };
+  const labels = {
+    tier: "tier", timeout: "timeouts",
+    t1: "T1", t2: "T2", t3: "T3",
+  };
+  for (const [key, sel] of Object.entries(map)) {
+    const el = $(sel);
+    if (!el) continue;
+    const n = state.faultCounts[key];
+    el.innerHTML = `${labels[key]} <b>${n}</b>`;
+    el.classList.toggle("nonzero", n > 0);
+    el.classList.remove("fired");
+    if (firedKeys.includes(key)) {
+      requestAnimationFrame(() => el.classList.add("fired"));
+    }
+  }
+}
+
+function fmt(v, decimals) {
+  if (v == null || Number.isNaN(v)) return "—";
+  return v.toFixed(decimals);
+}
+
+function renderRunPhase() {
+  if (state.screen !== "run") return;
+  $("#run-phase-name").textContent =
+    PHASE_LABEL[state.seqState] || state.seqStateName || "—";
+  if (state.phaseStartedAtMs != null) {
+    const sec = (Date.now() - state.phaseStartedAtMs) / 1000;
+    $("#run-phase-elapsed").textContent = sec.toFixed(1) + "s";
+  } else {
+    $("#run-phase-elapsed").textContent = "0.0s";
+  }
+  renderDataFlow();
+  renderPhaseProgress();
+}
+
+// Per-phase rough duration estimates, parameterised by the test
+// params dict. Numbers come from the seq table defaults +
+// observed sim run times — accurate to maybe ±30%, which is fine
+// for "is this taking longer than expected" feel.
+function estimatePhaseDurationS(phaseId, params) {
+  const p = params || {};
+  switch (phaseId) {
+    case 1: return 1.5;                                       // PRECHECK
+    case 2: return 4.0;                                       // POSITIONING
+    case 3:                                                   // BASELINE_PEN
+      // depth / target rate (mm/s → m/s) + small settle
+      return (p.max_depth_m || 0.30) / 0.020 + 2;
+    case 4:                                                   // LOAD_RAMP
+      // load / ramp rate (~10 N/s) + hold
+      return (p.max_load_n || p.peak_load_n || 500) / 10 + 5;
+    case 5:                                                   // REPEAT_LOAD
+      return (p.repeat_load_count || 3) * 6;
+    case 6: return 5.0;                                       // POST_PEN
+    case 7: return 0;                                         // TRACTION (stub, skipped)
+    case 8: return 1.5;                                       // PROCESSING
+    case 9: return 2.0;                                       // REPORTING
+    default: return 0;
+  }
+}
+
+// Phases the test will actually visit, in order. Depends on
+// repeat_load and post_pen flags; the FSW makes these opt-in via
+// the START_SITE_TEST dispatch.
+function phasesForTest(t) {
+  if (!t) return [];
+  const p = t.params || {};
+  const out = [1, 2, 3];                            // PRECHECK, POS, BASELINE
+  if (p.repeat_load_count && p.repeat_load_count > 0) out.push(4, 5);
+  else if (p.max_load_n) out.push(4);
+  if (p.enable_post !== false) out.push(6);
+  out.push(8, 9);                                   // PROC, REPORT
+  return out;
+}
+
+function fmtSec(s) {
+  if (!Number.isFinite(s) || s <= 0) return "—";
+  if (s < 60) return `${s.toFixed(0)}s`;
+  return `${Math.floor(s/60)}m ${Math.round(s%60)}s`;
+}
+
+function renderPhaseProgress() {
+  const t = state.currentTest;
+  if (!t) {
+    $("#run-phase-progress").style.visibility = "hidden";
+    return;
+  }
+  const phases = phasesForTest(t);
+  const totalEstS = phases.reduce(
+    (s, p) => s + estimatePhaseDurationS(p, t.params), 0);
+  const cur = state.seqState;
+  // Sum of estimated time for phases already completed.
+  const idx = phases.indexOf(cur);
+  const phaseEstS = (idx >= 0)
+    ? estimatePhaseDurationS(cur, t.params)
+    : 0;
+  const completedEstS = (idx > 0)
+    ? phases.slice(0, idx)
+        .reduce((s, p) => s + estimatePhaseDurationS(p, t.params), 0)
+    : 0;
+  const phaseElapsedS = (state.phaseStartedAtMs != null)
+    ? (Date.now() - state.phaseStartedAtMs) / 1000
+    : 0;
+  const totalElapsedEstS = completedEstS + Math.min(phaseElapsedS, phaseEstS);
+  const pct = totalEstS > 0
+    ? Math.min(100, Math.max(0, 100 * totalElapsedEstS / totalEstS))
+    : 0;
+
+  $("#run-phase-progress").style.visibility = "visible";
+  $("#run-progress-fill").style.width = pct.toFixed(1) + "%";
+
+  // Phase-bar ETA: time remaining in *this* phase.
+  const phaseRemS = Math.max(0, phaseEstS - phaseElapsedS);
+  const etaEl = $("#run-phase-eta");
+  if (etaEl) {
+    etaEl.textContent = (phaseEstS > 0)
+      ? `~${fmtSec(phaseRemS)} left in phase`
+      : "";
+  }
+
+  // Bottom progress meta: "Phase X of Y" + total estimate.
+  if (idx >= 0) {
+    $("#run-progress-text").textContent =
+      `Phase ${idx + 1} of ${phases.length} · ${PHASE_LABEL[cur] || ""}`;
+  } else {
+    $("#run-progress-text").textContent = "—";
+  }
+  $("#run-progress-total").textContent =
+    `~${fmtSec(totalElapsedEstS)} of ${fmtSec(totalEstS)}`;
+}
+// Tick elapsed every 200ms so it animates.
+setInterval(renderRunPhase, 200);
+
+// Pill on the run-screen phase bar that shows whether the sense
+// stream is alive. Cheap signal: time since last sense packet.
+//   <0.5s  flowing (green, pulses on each new packet)
+//    1-3s  stale (amber)
+//    >3s   dead  (red)
+function renderDataFlow() {
+  const el = $("#run-data-flow");
+  if (!el) return;
+  const senseBucket = state.diag && state.diag.byType.sense;
+  const lastMs = senseBucket ? senseBucket.lastMs : 0;
+  if (!lastMs) {
+    el.classList.remove("flowing", "stale", "dead");
+    $(".text", el).textContent = "no data yet";
+    return;
+  }
+  const ageS = (performance.now() - lastMs) / 1000;
+  el.classList.remove("flowing", "stale", "dead");
+  if (ageS < 0.5) {
+    el.classList.add("flowing");
+    const rate = senseBucket.count - senseBucket._prevWindowCount;
+    $(".text", el).textContent = `${(rate / 5).toFixed(0)} Hz`;
+  } else if (ageS < 3) {
+    el.classList.add("stale");
+    $(".text", el).textContent = `stale ${ageS.toFixed(1)}s`;
+  } else {
+    el.classList.add("dead");
+    $(".text", el).textContent = `no data ${ageS.toFixed(1)}s`;
+  }
+}
+
+function renderPlot() {
+  if (!state.currentTest) return;
+  // Update titles based on each plot's X-axis mode.
+  const fxLabel = state.plot.xAxisForce === "depth" ? "depth" : "time";
+  const qxLabel = state.plot.xAxisQc    === "depth" ? "depth" : "time";
+  const setTitle = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
+  setTitle("#run-plot-force-title", `Force vs ${fxLabel}`);
+  setTitle("#eng-plot-force-title", `Force vs ${fxLabel}`);
+  setTitle("#run-plot-qc-title",    `qc vs ${qxLabel}`);
+  setTitle("#eng-plot-qc-title",    `qc vs ${qxLabel}`);
+
+  drawPlotInto("#run-plot-force", "force", state.plot.xAxisForce);
+  drawPlotInto("#eng-plot-force", "force", state.plot.xAxisForce);
+  drawPlotInto("#run-plot-qc",    "qc",    state.plot.xAxisQc);
+  drawPlotInto("#eng-plot-qc",    "qc",    state.plot.xAxisQc);
+}
+
+function drawPlotInto(sel, yAxis, xAxis) {
+  const svg = $(sel);
+  if (!svg) return;
+  const vb = svg.getAttribute("viewBox").split(" ").map(parseFloat);
+  const W = vb[2], H = vb[3];
+  const PAD_L = 46, PAD_R = 12, PAD_T = 10, PAD_B = 24;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+
+  const maxDepthCm = (state.currentTest && state.currentTest.plotMaxDepth_cm) || 50;
+  const maxLoadN   = (state.currentTest && state.currentTest.plotMaxLoad_n)   || 800;
+
+  // Y-scale (fixed per plot)
+  let yMax, yUnit, ySample;
+  if (yAxis === "qc") {
+    const tool = (state.currentTest && state.currentTest.params.tool_id) || 1;
+    const area = CONE_TIP_AREA_M2[tool] || CONE_TIP_AREA_M2[1];
+    yMax  = (maxLoadN / area) / 1e6;          // MPa
+    yUnit = "MPa";
+    ySample = s => (s.f_n / area) / 1e6;
+  } else {
+    yMax  = maxLoadN;
+    yUnit = "N";
+    ySample = s => s.f_n;
+  }
+
+  // X-scale (per-plot toggle)
+  let xMax, xUnit, xSample;
+  if (xAxis === "time") {
+    const allSamples = state.baselineSamples.concat(state.postSamples);
+    const lastT = allSamples.length ? allSamples[allSamples.length - 1].t_s : 0;
+    xMax = Math.max(30, Math.ceil(lastT * 1.1));
+    xUnit = "s";
+    xSample = s => s.t_s;
+  } else {
+    xMax = maxDepthCm;
+    xUnit = "cm";
+    xSample = s => s.d_cm;
+  }
+
+  const xOf = v => PAD_L + (v / xMax)  * innerW;
+  const yOf = v => PAD_T + (1 - v / yMax) * innerH;
+
+  const parts = [];
+  parts.push(`<rect x="${PAD_L}" y="${PAD_T}" width="${innerW}" height="${innerH}"
+      fill="none" stroke="var(--border)" stroke-width="1"/>`);
+
+  // X-axis gridlines + labels. Spec calls out 10 cm in depth mode;
+  // for time mode pick a tick that gives ~6 ticks.
+  const xStep = xAxis === "depth" ? 10 : niceStep(xMax, 6);
+  for (let v = xStep; v < xMax; v += xStep) {
+    const x = xOf(v);
+    parts.push(`<line x1="${x}" y1="${PAD_T}" x2="${x}" y2="${PAD_T + innerH}"
+        stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2 3"/>`);
+    parts.push(`<text x="${x}" y="${PAD_T + innerH + 14}"
+        font-size="10" fill="var(--text-tertiary)" text-anchor="middle">${formatTick(v, xUnit)}</text>`);
+  }
+
+  // Y-axis gridlines. 250 N in force mode; nice-step in qc mode.
+  const yStep = yAxis === "force" ? 250 : niceStep(yMax, 5);
+  for (let v = yStep; v < yMax; v += yStep) {
+    const y = yOf(v);
+    parts.push(`<line x1="${PAD_L}" y1="${y}" x2="${PAD_L + innerW}" y2="${y}"
+        stroke="var(--border)" stroke-width="0.5" stroke-dasharray="2 3"/>`);
+    parts.push(`<text x="${PAD_L - 4}" y="${y + 3}"
+        font-size="10" fill="var(--text-tertiary)" text-anchor="end">${formatTick(v, yUnit)}</text>`);
+  }
+
+  // Phase markers — vertical dashed verticals at each phase boundary.
+  for (const m of state.phaseMarkers) {
+    const xv = xAxis === "depth" ? m.d_cm : m.t_s;
+    if (xv > xMax || xv < 0) continue;
+    const x = xOf(xv);
+    parts.push(`<line x1="${x}" y1="${PAD_T}" x2="${x}" y2="${PAD_T + innerH}"
+        stroke="var(--text-tertiary)" stroke-width="0.5" stroke-dasharray="3 2"/>`);
+    parts.push(`<text x="${x + 3}" y="${PAD_T + 10}"
+        font-size="9" fill="var(--text-tertiary)">${m.phase}</text>`);
+  }
+
+  // Trace builder
+  const trace = (samples, color, dashed) => {
+    if (!samples.length) return "";
+    const pts = samples.map(s => `${xOf(xSample(s)).toFixed(1)},${yOf(ySample(s)).toFixed(1)}`).join(" ");
+    const dash = dashed ? `stroke-dasharray="6 4"` : "";
+    return `<polyline points="${pts}" fill="none" stroke="${color}"
+        stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" ${dash}/>`;
+  };
+  parts.push(trace(state.baselineSamples, "var(--accent)", false));
+  parts.push(trace(state.postSamples, "var(--post-accent)", true));
+
+  svg.innerHTML = parts.join("");
+}
+
+function niceStep(range, target) {
+  // Pick a 1/2/5 × 10^n step that gives roughly `target` ticks across range.
+  const raw = range / target;
+  const exp = Math.floor(Math.log10(raw));
+  const base = raw / Math.pow(10, exp);
+  const candidate = base < 1.5 ? 1 : base < 3.5 ? 2 : base < 7.5 ? 5 : 10;
+  return candidate * Math.pow(10, exp);
+}
+function formatTick(v, unit) {
+  // Avoid trailing zeros for nice axis labels.
+  const s = Math.abs(v) < 1 ? v.toFixed(2) :
+            Math.abs(v) < 10 ? v.toFixed(1) : Math.round(v).toString();
+  return s + unit;
+}
+
+function renderSiteId() {
+  $("#site-pill").textContent = "Site " + pad3(state.siteId);
+  $("#eng-site").textContent = pad3(state.siteId);
+}
+
+// ────────────────────────────────────────────────────────────
+// Event log (engineer view)
+// ────────────────────────────────────────────────────────────
+function appendEvent(level, text) {
+  state.events.push({ level, text, ts: Date.now() });
+  if (state.events.length > 500) {
+    state.events.splice(0, state.events.length - 500);
+  }
+  renderEventLog();
+}
+
+state.logFilter = { info: true, warn: true, error: true, search: "" };
+
+function logEventMatches(e) {
+  if (!state.logFilter[e.level]) return false;
+  const q = state.logFilter.search;
+  if (!q) return true;
+  return e.text.toLowerCase().includes(q.toLowerCase());
+}
+
+function renderEventLog() {
+  const log = $("#eng-log");
+  if (!log) return;
+  const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 12;
+  const filtered = state.events.filter(logEventMatches);
+  // Show last 200 of filtered set so a search across the buffer
+  // doesn't blow up the DOM.
+  const display = filtered.slice(-200);
+  log.innerHTML = display.map(e => {
+    const t = new Date(e.ts);
+    const ts = `${String(t.getHours()).padStart(2,"0")}:${
+      String(t.getMinutes()).padStart(2,"0")}:${
+      String(t.getSeconds()).padStart(2,"0")}.${
+      String(t.getMilliseconds()).padStart(3,"0")}`;
+    return `<div class="ev ${e.level}">` +
+      `<span class="t">${ts}</span>` +
+      `<span class="lvl">${e.level}</span>` +
+      `${escapeHtml(e.text)}` +
+    `</div>`;
+  }).join("");
+  if (atBottom) log.scrollTop = log.scrollHeight;
+  const countEl = $("#log-count");
+  if (countEl) {
+    countEl.textContent = `${filtered.length} / ${state.events.length}`;
+  }
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+// Event-log toolbar wiring. Filters by level + free-text. Export
+// dumps the entire event buffer (not just the filtered view) as
+// JSONL — one event per line — so tooling on the other end can
+// parse without HTML stripping.
+function wireLogToolbar() {
+  const onLevelChange = () => {
+    state.logFilter.info  = $("#log-show-info").checked;
+    state.logFilter.warn  = $("#log-show-warn").checked;
+    state.logFilter.error = $("#log-show-error").checked;
+    renderEventLog();
+  };
+  for (const id of ["log-show-info", "log-show-warn", "log-show-error"]) {
+    document.getElementById(id).addEventListener("change", onLevelChange);
+  }
+  $("#log-search").addEventListener("input", e => {
+    state.logFilter.search = e.target.value || "";
+    renderEventLog();
+  });
+  $("#log-clear").addEventListener("click", () => {
+    if (!confirm("Clear the event log buffer? "
+                 + "(does not affect server-side logging)")) return;
+    state.events = [];
+    renderEventLog();
+  });
+  $("#log-export").addEventListener("click", () => {
+    const lines = state.events.map(e => JSON.stringify({
+      timestamp: e.ts / 1000, level: e.level, text: e.text,
+    }));
+    const blob = new Blob([lines.join("\n") + "\n"],
+                          { type: "application/x-ndjson" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    a.download = `lrmh_events_${ts}.jsonl`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+wireLogToolbar();
+
+// ────────────────────────────────────────────────────────────
+// Pick screen logic
+// ────────────────────────────────────────────────────────────
+function maybeShowSafeBanner() {
+  const banner = $("#op-warning");
+  if (state.modeName === "SAFE" || state.modeName === "FAULT") {
+    $(".text", banner).textContent =
+      `Instrument is in ${state.modeName} state from the last test. ` +
+      `Clear to continue.`;
+    show(banner);
+  } else {
+    hide(banner);
+  }
+}
+$("#op-clear-safe").addEventListener("click", () => {
+  send("ensure_ready");
+  hide($("#op-warning"));
+});
+
+$$(".test-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const type = card.dataset.type;
+    onPickTest(type);
+  });
+});
+
+function onPickTest(type) {
+  state.currentTest = {
+    type,
+    params: defaultParams(type),
+    plotMaxDepth_cm: 50,
+    plotMaxLoad_n:   800,
+  };
+  state.baselineSamples = [];
+  state.postSamples = [];
+  state.inPostPhase = false;
+  for (const sel of ["#run-legend-force-post", "#run-legend-qc-post",
+                     "#eng-legend-force-post", "#eng-legend-qc-post"]) {
+    const el = $(sel); if (el) hide(el);
+  }
+
+  $("#params-title").textContent = TEST_NAME[type];
+  $("#params-subtitle").textContent = subtitleFor(type);
+  renderParamsForm(type);
+
+  state.pendingFlow = "open-params";
+  send("ensure_ready");
+}
+
+function subtitleFor(type) {
+  return {
+    cpt:   "Cone penetration test: set the drive parameters and start.",
+    plate: "Plate load test: set the load cycles and start.",
+    full:  "Full site characterization: baseline, cycles, and post-disturbance.",
+  }[type] || "";
+}
+
+function defaultParams(type) {
+  if (type === "cpt") {
+    return { tool_id: 1, max_depth_m: 0.30, pen_rate_mm_s: 20, max_load_n: 500 };
+  }
+  if (type === "plate") {
+    return { peak_load_n: 500, cycles: 3, hold_time_s: 5 };
+  }
+  return { max_depth_m: 0.30, peak_load_n: 500, cycles: 3, post: 1 };
+}
+
+function renderParamsForm(type) {
+  const host = $("#params-form-host");
+  const p = state.currentTest.params;
+  let html = '<div class="params-form">';
+
+  if (type === "cpt") {
+    html += `
+      <div class="field">
+        <label for="f-tool">Toolhead</label>
+        <select id="f-tool">
+          <option value="1">Cone 30°</option>
+          <option value="3">Cone 60°</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-depth">Target depth (m)</label>
+        <input id="f-depth" type="number" min="0.05" max="0.33" step="0.01" value="${p.max_depth_m}">
+      </div>
+      <div class="field">
+        <label for="f-rate">Penetration rate (mm/s)</label>
+        <input id="f-rate" type="number" min="1" max="50" step="1" value="${p.pen_rate_mm_s}">
+        <span class="hint">ASTM D5778: 20 mm/s</span>
+      </div>
+      <div class="field">
+        <label for="f-load">Load limit (N)</label>
+        <input id="f-load" type="number" min="50" max="600" step="10" value="${p.max_load_n}">
+      </div>`;
+  } else if (type === "plate") {
+    html += `
+      <div class="field">
+        <label>Toolhead</label>
+        <div class="static-value">Plate 80 mm</div>
+      </div>
+      <div class="field">
+        <label for="f-peak">Peak load (N)</label>
+        <input id="f-peak" type="number" min="50" max="2000" step="10" value="${p.peak_load_n}">
+      </div>
+      <div class="field">
+        <label for="f-cycles">Load cycles</label>
+        <input id="f-cycles" type="number" min="1" max="20" step="1" value="${p.cycles}">
+      </div>
+      <div class="field">
+        <label for="f-hold">Hold time per cycle (s)</label>
+        <input id="f-hold" type="number" min="1" max="60" step="1" value="${p.hold_time_s}">
+      </div>`;
+  } else {
+    html += `
+      <div class="field">
+        <label for="f-depth">Target depth (m)</label>
+        <input id="f-depth" type="number" min="0.05" max="0.40" step="0.01" value="${p.max_depth_m}">
+      </div>
+      <div class="field">
+        <label for="f-peak">Peak load (N)</label>
+        <input id="f-peak" type="number" min="50" max="2000" step="10" value="${p.peak_load_n}">
+      </div>
+      <div class="field">
+        <label for="f-cycles">Load cycles</label>
+        <input id="f-cycles" type="number" min="1" max="20" step="1" value="${p.cycles}">
+      </div>
+      <div class="field">
+        <label for="f-post">Post-disturbance CPT</label>
+        <select id="f-post">
+          <option value="1" ${p.post ? "selected" : ""}>Include</option>
+          <option value="0" ${p.post ? "" : "selected"}>Skip</option>
+        </select>
+      </div>`;
+  }
+  html += "</div>";
+  host.innerHTML = html;
+}
+
+function readParamsFromForm(type) {
+  const out = {};
+  if (type === "cpt") {
+    out.tool_id        = parseInt($("#f-tool").value, 10);
+    out.max_depth_m    = parseFloat($("#f-depth").value);
+    out.pen_rate_mm_s  = parseFloat($("#f-rate").value);
+    out.max_load_n     = parseFloat($("#f-load").value);
+  } else if (type === "plate") {
+    out.peak_load_n  = parseFloat($("#f-peak").value);
+    out.cycles       = parseInt($("#f-cycles").value, 10);
+    out.hold_time_s  = parseFloat($("#f-hold").value);
+  } else {
+    out.max_depth_m  = parseFloat($("#f-depth").value);
+    out.peak_load_n  = parseFloat($("#f-peak").value);
+    out.cycles       = parseInt($("#f-cycles").value, 10);
+    out.post         = parseInt($("#f-post").value, 10);
+  }
+  return out;
+}
+
+// ────────────────────────────────────────────────────────────
+// Params screen
+// ────────────────────────────────────────────────────────────
+$("#params-back").addEventListener("click", () => {
+  state.currentTest = null;
+  setScreen("pick");
+});
+$("#params-start").addEventListener("click", () => {
+  const t = state.currentTest;
+  if (!t) return;
+  t.params = readParamsFromForm(t.type);
+  // Adapt plot scale to params.
+  t.plotMaxDepth_cm = (t.params.max_depth_m || 0.30) * 100 + 5;
+  t.plotMaxLoad_n   = (t.params.peak_load_n || t.params.max_load_n || 500) * 1.1;
+
+  $("#run-title").textContent    = TEST_NAME[t.type];
+  $("#run-subtitle").textContent = subtitleFor(t.type);
+
+  resetTestPlotState();
+
+  // ensure_ready first (no-op if already READY), then send start_test.
+  state.pendingFlow = "send-start";
+  send("ensure_ready");
+});
+
+function resetTestPlotState() {
+  state.baselineSamples = [];
+  state.postSamples = [];
+  state.inPostPhase = false;
+  state.phaseStartedAtMs = Date.now();
+  state.testStartedAtMs = Date.now();
+  state.phaseMarkers = [];
+  state.penRate_mmps = 0;
+  state._prevSenseDepth_m = null;
+  state._prevSenseT_s = null;
+  state._wasInActivePhase = false;
+}
+
+function sendStartTest() {
+  const t = state.currentTest;
+  if (!t) return;
+  send("start_test", {
+    test_type: t.type,
+    site_id: state.siteId,
+    params: t.params,
+  });
+  setScreen("run");
+}
+
+// ────────────────────────────────────────────────────────────
+// Run screen
+// ────────────────────────────────────────────────────────────
+$("#run-abort").addEventListener("click", () => {
+  send("abort");
+  // Treat abort optimistically as "test over, partial result". The
+  // bridge will emit a site_result if one comes; we'll show whatever
+  // values we got and a Partial pill.
+  showDoneScreen({ aborted: true });
+});
+$("#eng-abort").addEventListener("click", () => {
+  send("abort");
+  if (state.currentTest) showDoneScreen({ aborted: true });
+});
+
+function confirmStow() {
+  return confirm(
+    "Stow & shut down the instrument?\n\n" +
+    "Returns the actuator to home, parks the tool, and powers " +
+    "the instrument down (mode → STANDBY → OFF). To run another " +
+    "test you'll need to Init + Deploy again.");
+}
+$("#op-stow").addEventListener("click", () => {
+  if (confirmStow()) send("stow");
+});
+$("#done-stow").addEventListener("click", () => {
+  if (confirmStow()) send("stow");
+});
+$("#eng-init").addEventListener("click", () => send("init"));
+$("#eng-deploy").addEventListener("click", () => send("deploy"));
+$("#eng-stow").addEventListener("click", () => {
+  if (confirmStow()) send("stow");
+});
+
+// ────────────────────────────────────────────────────────────
+// Manual actuator control (engineer view)
+//
+// Routes through lrmh_seq SEQ_MANUAL_CTRL_CC; lrmh_seq rejects
+// unless sequencer phase == IDLE (FSW guard, ADR-0007). The UI
+// disables the buttons when not IDLE so the operator gets a
+// clearer signal than an EVS reject after the fact.
+// ────────────────────────────────────────────────────────────
+function manualCtrlAllowed() {
+  // Phase 0 == IDLE (see SEQ_STATES in lrmh_bridge.py).
+  return state.connected && state.seqState === 0;
+}
+
+function renderManualCtrlAvailability() {
+  const allowed = manualCtrlAllowed();
+  const hint = $("#manual-hint");
+  if (hint) {
+    hint.classList.toggle("allowed", allowed);
+    hint.classList.toggle("blocked", !allowed);
+    hint.textContent = allowed
+      ? "— sequencer IDLE, manual ctrl enabled"
+      : `— blocked (phase ${state.seqStateName || state.seqState})`;
+  }
+  for (const id of ["manual-move", "manual-force", "manual-retract",
+                    "manual-hold", "manual-estop", "manual-clear-estop"]) {
+    const b = document.getElementById(id);
+    if (b) b.disabled = !allowed;
+  }
+}
+
+function manualNum(id, fallback) {
+  const el = document.getElementById(id);
+  const v = el ? parseFloat(el.value) : NaN;
+  return Number.isFinite(v) ? v : fallback;
+}
+
+$("#manual-move").addEventListener("click", () => {
+  if (!manualCtrlAllowed()) return;
+  const pos  = manualNum("manual-move-pos", 0.05);
+  const rate = manualNum("manual-move-rate", 0.005);
+  send("ctrl_move", { params: { position: pos, rate, timeout: 60 } });
+});
+$("#manual-force").addEventListener("click", () => {
+  if (!manualCtrlAllowed()) return;
+  const f    = manualNum("manual-force-n", 50);
+  const rate = manualNum("manual-force-rate", 0.003);
+  if (!confirm(`Force push to ${f.toFixed(0)} N at ${rate.toFixed(3)} m/s?\n` +
+               `Risk: tip damage / regolith gouging if rate is high.`)) return;
+  send("ctrl_force", { params: { force: f, rate, timeout: 60 } });
+});
+$("#manual-retract").addEventListener("click", () => {
+  if (!manualCtrlAllowed()) return;
+  send("ctrl_retract", { params: { rate: 0.008, timeout: 30 } });
+});
+$("#manual-hold").addEventListener("click", () => {
+  if (!manualCtrlAllowed()) return;
+  send("ctrl_hold");
+});
+$("#manual-estop").addEventListener("click", () => {
+  if (!manualCtrlAllowed()) return;
+  if (!confirm("Issue HAL E-STOP? Halts the actuator immediately.\n" +
+               "(Recover via Clear e-stop, which re-runs the HAL init.)")) return;
+  send("ctrl_estop");
+});
+$("#manual-clear-estop").addEventListener("click", () => {
+  if (!manualCtrlAllowed()) return;
+  send("ctrl_clear_estop");
+});
+
+// Refresh availability whenever connection or seq phase changes.
+// Cheap to recompute; called from the same render path as the
+// pipeline pills.
+
+// ────────────────────────────────────────────────────────────
+// Fault injection (sim-only)
+//
+// Talks via the bridge's INJECT_FAULT route, which forwards a
+// HAL_REQ_INJECT_FAULT envelope to the HAL sim on udp:17011. On
+// bench/flight backends the request acks as a no-op, so it's safe
+// to wire even when the dashboard is pointed at real hardware.
+// ────────────────────────────────────────────────────────────
+const INJECT_DESCRIPTIONS = {
+  "force-sat":   "Pin tip force at saturation (LRMH_AP_FORCE_SAT). Expected: T2 SKIP_SITE.",
+  "force-rate":  "Force jumps spike dF/dt (LRMH_AP_FORCE_RATE). Expected: T1 RESUME.",
+  "overcurrent": "Pin motor current high (LRMH_AP_OVERCURRENT). Expected: T3 SAFE.",
+  "hard-stop":   "Stroke pinned at end-of-travel (LRMH_AP_HARD_STOP). Expected: T2 SKIP_SITE.",
+  "thermal":     "Actuator temperature high (LRMH_AP_THERMAL). Expected: T3 SAFE.",
+  "bus-voltage": "Bus voltage outside envelope (LRMH_AP_BUS_VOLTAGE). Expected: T3 SAFE.",
+};
+
+document.querySelectorAll("[data-inject]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const kind = btn.dataset.inject;
+    const desc = INJECT_DESCRIPTIONS[kind] || "";
+    if (!confirm(`Inject ${kind}?\n\n${desc}\n\n` +
+                 `Persists until cleared.`)) return;
+    send("inject_fault", { params: { kind } });
+  });
+});
+
+$("#inject-clear").addEventListener("click", () => {
+  send("inject_fault", { params: { kind: "none" } });
+});
+
+// ────────────────────────────────────────────────────────────
+// Raw command sender (engineer escape hatch)
+// ────────────────────────────────────────────────────────────
+$("#raw-send").addEventListener("click", () => {
+  const mid = $("#raw-mid").value.trim();
+  const cc = parseInt($("#raw-cc").value, 10);
+  const payload_hex = ($("#raw-payload").value || "").trim();
+  if (!mid) {
+    appendEvent("warn", "Raw cmd: MID required");
+    return;
+  }
+  if (!Number.isFinite(cc) || cc < 0 || cc > 255) {
+    appendEvent("warn", "Raw cmd: CC must be 0-255");
+    return;
+  }
+  if (!confirm(`Send raw CCSDS command?\n\n` +
+               `MID = ${mid}\nCC = ${cc}\n` +
+               `Payload = ${payload_hex.length ? payload_hex : '(none)'}\n\n` +
+               `The bridge does not validate this — make sure the MID/CC ` +
+               `combination is real or you'll get a cFE pipeline drop.`)) return;
+  send("raw_cmd", { params: { mid, cc, payload_hex } });
+});
+
+// ────────────────────────────────────────────────────────────
+// cFS file browser (engineer view)
+//
+// Bridge serves cf/lrmh/{data,reports} read-only. Text files
+// (.txt / .json / .log) render inline; binary files (.bin) get a
+// metadata stub + Download button. Path-traversal is rejected
+// bridge-side.
+// ────────────────────────────────────────────────────────────
+state.files = {};   // last fs_list payload, keyed by sub.
+
+function handleFsList(m) {
+  state.files = m;
+  const cfDirEl = $("#files-cf-dir");
+  if (cfDirEl) {
+    cfDirEl.textContent = "— " + (m.cf_dir || "?");
+  }
+  for (const sub of ["reports", "data"]) {
+    const host = $(`#files-${sub}`);
+    if (!host) continue;
+    const list = m[sub] || [];
+    if (m.error) {
+      host.innerHTML = `<span class="files-empty">${escapeHtml(m.error)}</span>`;
+      continue;
+    }
+    if (!list.length) {
+      host.innerHTML = `<span class="files-empty">(empty)</span>`;
+      continue;
+    }
+    let html = "";
+    for (const f of list) {
+      const tsStr = f.mtime
+        ? new Date(f.mtime * 1000).toLocaleString()
+        : "—";
+      const sizeStr = humanSize(f.size);
+      html += `<div class="file-row">` +
+        `<span class="name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>` +
+        `<span class="size">${sizeStr}</span>` +
+        `<span class="ts">${tsStr}</span>` +
+        `<span class="actions">` +
+        `<button data-fs-view="${escapeHtml(sub)}/${escapeHtml(f.name)}">view</button>` +
+        `<button data-fs-dl="${escapeHtml(sub)}/${escapeHtml(f.name)}">⬇</button>` +
+        `</span></div>`;
+    }
+    host.innerHTML = html;
+  }
+}
+
+function handleFsFetch(m) {
+  const viewer = $("#files-viewer");
+  if (!viewer) return;
+  // If this fetch was triggered by a download button (state.fileDownload),
+  // build a Blob and trigger a download instead of rendering.
+  if (state.fileDownload && state.fileDownload === `${m.sub}/${m.name}`) {
+    state.fileDownload = null;
+    let bytes;
+    if (m.text != null) {
+      bytes = new TextEncoder().encode(m.text);
+    } else if (m.base64) {
+      const raw = atob(m.base64);
+      bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    } else {
+      appendEvent("warn", `Empty fetch payload for ${m.sub}/${m.name}`);
+      return;
+    }
+    const blob = new Blob([bytes], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = m.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  }
+  // Otherwise render inline.
+  viewer.classList.add("open");
+  const trunc = m.truncated ? " (truncated)" : "";
+  let body;
+  if (m.text != null) {
+    body = `<pre>${escapeHtml(m.text)}</pre>`;
+  } else if (m.base64) {
+    body = `<div class="binary-stub">` +
+      `Binary file (${humanSize(m.size)}${trunc}). ` +
+      `Use the ⬇ button next to the listing entry to download.` +
+      `</div>`;
+  } else {
+    body = `<div class="binary-stub">empty / unreadable</div>`;
+  }
+  viewer.innerHTML =
+    `<div class="vw-header">` +
+    `<span class="vw-name">${escapeHtml(m.sub)}/${escapeHtml(m.name)}</span>` +
+    `<span class="vw-meta">${humanSize(m.size)}${trunc}</span>` +
+    `<button class="btn btn-ghost" id="files-close" style="margin-left:8px;font-size:11px;padding:2px 8px;">Close</button>` +
+    `</div>` + body;
+  $("#files-close").addEventListener("click", () => viewer.classList.remove("open"));
+}
+
+function humanSize(n) {
+  if (n == null) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} kB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+$("#files-refresh").addEventListener("click", () => send("fs_list"));
+
+document.addEventListener("click", (ev) => {
+  const v = ev.target.closest("[data-fs-view]");
+  const d = ev.target.closest("[data-fs-dl]");
+  if (v) {
+    const [sub, ...nameParts] = v.dataset.fsView.split("/");
+    state.fileDownload = null;
+    send("fs_fetch", { params: { sub, name: nameParts.join("/") } });
+  } else if (d) {
+    const [sub, ...nameParts] = d.dataset.fsDl.split("/");
+    state.fileDownload = `${sub}/${nameParts.join("/")}`;
+    send("fs_fetch", { params: { sub, name: nameParts.join("/") } });
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// HK packet inspector + bitmask decoders
+//
+// Renders every field from the latest HK packet as a key/value
+// grid. Refreshed on each handleHk update via renderHkInspector().
+// ────────────────────────────────────────────────────────────
+
+// Display order for the HK grid. Fields not in this list are
+// appended at the end so we never silently drop new HK fields.
+const HK_FIELD_ORDER = [
+  "mode", "modeName", "activeTool",
+  "seqState", "seqStateName", "seqQuality", "seqWaitingForCtrl",
+  "siteId", "sessionId", "epoch",
+  "ctrlMode", "ctrlCommandPending", "halState",
+  "halFlags", "ctrlStaleCount",
+  "strokePosition", "lastCommandedForce", "sensorChannelValid",
+  "currentForce", "currentDepth", "motorCurrent",
+  "busVoltage", "temperature", "forceRate",
+  "faultFlags", "faultActive", "recoveryTier",
+  "timeoutCount", "t2EventsInWindow",
+  "totalCmdCount", "totalErrCount", "totalRejectedCount", "hkCycleCount",
+];
+
+// Field formatter: returns {value, warn} for the inspector grid.
+// Uses field name to pick a shape; falls back to JSON-ish text.
+function formatHkField(key, value) {
+  if (value == null) return { value: "—", warn: false };
+  if (key === "halFlags" || key === "sensorChannelValid"
+      || key === "faultFlags") {
+    return { value: "0x" + value.toString(16).padStart(4, "0"),
+             warn: key === "faultFlags" && value !== 0 };
+  }
+  if (key === "modeName") {
+    return { value, warn: value === "SAFE" || value === "FAULT" };
+  }
+  if (key === "faultActive" || key === "recoveryTier"
+      || key === "timeoutCount" || key === "totalErrCount"
+      || key === "totalRejectedCount") {
+    return { value: String(value), warn: value > 0 };
+  }
+  if (typeof value === "number" && !Number.isInteger(value)) {
+    return { value: value.toFixed(4), warn: false };
+  }
+  return { value: String(value), warn: false };
+}
+
+function renderHkInspector(hk) {
+  const grid = $("#hk-grid");
+  if (!grid || !hk) return;
+  // Build the row list in canonical order, then append unknown fields.
+  const seen = new Set();
+  const rows = [];
+  for (const k of HK_FIELD_ORDER) {
+    if (k in hk) {
+      seen.add(k);
+      rows.push([k, hk[k]]);
+    }
+  }
+  for (const [k, v] of Object.entries(hk)) {
+    if (seen.has(k)) continue;
+    if (k === "type" || k === "tlm" || k === "timestamp"
+        || k.startsWith("_")) continue;
+    // Legacy aliases (cmdCount, cmdErrCount, errorFlags, faultState)
+    // are populated alongside their canonical names; skip them in the
+    // inspector so the same value isn't shown twice.
+    if (k === "cmdCount" || k === "cmdErrCount"
+        || k === "errorFlags" || k === "faultState") continue;
+    rows.push([k, v]);
+  }
+  // One "row" is two grid cells (key + val). Use innerHTML batched.
+  let html = "";
+  for (const [k, v] of rows) {
+    const { value, warn } = formatHkField(k, v);
+    html += `<span class="hk-key">${escapeHtml(k)}</span>` +
+            `<span class="hk-val${warn ? " warn" : ""}">` +
+            `${escapeHtml(value)}</span>`;
+  }
+  grid.innerHTML = html || `<span class="hk-empty">empty packet</span>`;
+}
+
+// Bitmask labels.
+const CH_VALID_BITS = [
+  { label: "FORCE",   warn: false },
+  { label: "DEPTH",   warn: false },
+  { label: "STROKE",  warn: false },
+  { label: "CURRENT", warn: false },
+  { label: "BUS_V",   warn: false },
+  { label: "TEMP",    warn: false },
+];
+
+// Per hal/include/lrmh_hal.h: the lower bits are status (POS_REACHED,
+// FORCE_REACHED, etc) — informational, render in success color when
+// set. The upper bits are fault indicators (HARD_STOP_HIT,
+// OVERCURRENT, etc) — render in warn color when set.
+const HAL_FLAG_BITS = [
+  { label: "POS_REACH",  warn: false },  // 0x0001
+  { label: "F_CLAMP",    warn: false },  // 0x0002
+  { label: "F_REACH",    warn: false },  // 0x0004
+  { label: "S_CLAMP",    warn: false },  // 0x0008
+  { label: "RETR_BLK",   warn: true  },  // 0x0010
+  { label: "HARDSTOP",   warn: true  },  // 0x0020
+  { label: "ENC_LOSS",   warn: true  },  // 0x0040
+  { label: "OVERCURR",   warn: true  },  // 0x0080
+  { label: "THERMAL",    warn: true  },  // 0x0100
+  { label: "BUS_V",      warn: true  },  // 0x0200
+  { label: "BKND_LOST",  warn: true  },  // 0x0400
+];
+
+function renderBitmask(targetEl, hexEl, value, defs) {
+  if (!targetEl) return;
+  if (hexEl) hexEl.textContent = (value == null)
+    ? "—"
+    : "0x" + value.toString(16).padStart(4, "0");
+  let html = "";
+  for (let i = 0; i < defs.length; i++) {
+    const set = (value & (1 << i)) !== 0;
+    const cls = "bitmask-bit" + (defs[i].warn ? " warn-bit" : "")
+                + (set ? " set" : "");
+    html += `<span class="${cls}">` +
+            `<span class="dot"></span>` +
+            `<span class="label">${defs[i].label}</span></span>`;
+  }
+  targetEl.innerHTML = html;
+}
+
+function renderBitmasks(hk) {
+  if (!hk) return;
+  renderBitmask($("#ch-valid-bits"), $("#ch-valid-hex"),
+                hk.sensorChannelValid, CH_VALID_BITS);
+  renderBitmask($("#hal-flags-bits"), $("#hal-flags-hex"),
+                hk.halFlags, HAL_FLAG_BITS);
+}
+
+// ────────────────────────────────────────────────────────────
+// Connection diagnostics
+// ────────────────────────────────────────────────────────────
+state.diag = {
+  startedMs: performance.now(),
+  reconnects: -1,        // bumped to 0 on first connect
+  total: 0,
+  // per-tlm-type: { count, lastMs, _prevWindowCount }
+  byType: {},
+  ping: { sentMs: null, rttMs: null },
+};
+
+const DIAG_TYPES = ["hk", "sense", "seq_status", "site_result",
+                    "fault", "proc"];
+
+function bumpDiag(type) {
+  if (!type) return;
+  const now = performance.now();
+  let bucket = state.diag.byType[type];
+  if (!bucket) {
+    bucket = { count: 0, lastMs: 0, _prevWindowCount: 0 };
+    state.diag.byType[type] = bucket;
+  }
+  bucket.count += 1;
+  bucket.lastMs = now;
+  state.diag.total += 1;
+}
+
+function noteReconnect() {
+  state.diag.reconnects += 1;
+}
+
+function renderDiag() {
+  const d = state.diag;
+  const now = performance.now();
+  const uptimeS = (now - d.startedMs) / 1000;
+
+  $("#diag-ws-state").textContent = state.connected ? "CONNECTED" : "disconnected";
+  $("#diag-endpoint").textContent = `udp ${state.cfsHost}:${state.ciPort}`;
+  $("#diag-rtt").textContent = (d.ping.rttMs == null)
+    ? "—" : `${d.ping.rttMs.toFixed(1)} ms`;
+  $("#diag-total").textContent = d.total.toLocaleString();
+  $("#diag-uptime").textContent = formatDuration(uptimeS);
+  $("#diag-reconn").textContent = String(Math.max(0, d.reconnects));
+
+  // Per-type rates: msgs/sec averaged over a 5s rolling window.
+  // We sample count at this render tick, subtract the snapshot from
+  // ~5s ago. To avoid wiring a real ring buffer, just store the
+  // count from 5 ticks ago (renderDiag fires at 1 Hz).
+  const ratesEl = $("#diag-rates");
+  if (!ratesEl) return;
+  const known = DIAG_TYPES.filter(t => state.diag.byType[t]);
+  if (known.length === 0) {
+    ratesEl.innerHTML = `<span class="diag-empty">no data yet</span>`;
+    return;
+  }
+  let html = "";
+  for (const t of known) {
+    const b = d.byType[t];
+    const ratePerS = (b.count - b._prevWindowCount) / 5;
+    const ageS = (now - b.lastMs) / 1000;
+    const stale = ageS > 5 ? " stale" : "";
+    html += `<div class="rate-row">` +
+            `<span>${escapeHtml(t)}</span>` +
+            `<span>${ratePerS.toFixed(1)} /s</span>` +
+            `<span class="${stale.trim()}">${ageS.toFixed(1)}s ago</span>` +
+            `</div>`;
+  }
+  ratesEl.innerHTML = html;
+}
+
+// 5s window rotation: snap _prevWindowCount = count every 5 seconds.
+setInterval(() => {
+  for (const t in state.diag.byType) {
+    state.diag.byType[t]._prevWindowCount = state.diag.byType[t].count;
+  }
+}, 5000);
+
+// Render at 1 Hz so latency / staleness numbers tick visibly.
+setInterval(() => {
+  if (state.view === "engineer") renderDiag();
+}, 1000);
+
+function formatDuration(s) {
+  if (s < 60) return `${s.toFixed(0)}s`;
+  if (s < 3600) return `${Math.floor(s/60)}m ${Math.floor(s%60)}s`;
+  return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+}
+
+$("#diag-ping").addEventListener("click", () => {
+  if (!state.connected) {
+    appendEvent("warn", "Cannot ping: not connected");
+    return;
+  }
+  state.diag.ping.sentMs = performance.now();
+  send("noop");
+});
+
+// ────────────────────────────────────────────────────────────
+// Bridge-side preset store + site history
+//
+// localStorage was rejected because the SPA is a sim/dev tool —
+// presets/history live as JSON files in ground/state/ instead, so
+// they survive browser swaps and could be ported to the eventual
+// production UI.
+// ────────────────────────────────────────────────────────────
+state.presets = {};       // { test_type: [{name, params}] }
+state.history = [];
+
+function handlePresets(m) {
+  state.presets = m.presets || {};
+  if (state.screen === "params" && state.currentTest) {
+    populatePresetDropdown(state.currentTest.type);
+  }
+}
+
+function handleSiteHistory(m) {
+  state.history = Array.isArray(m.history) ? m.history : [];
+  if (state.screen === "pick") renderSiteHistory();
+}
+
+function populatePresetDropdown(testType) {
+  const sel = $("#preset-pick");
+  if (!sel) return;
+  const bucket = state.presets[testType] || [];
+  let html = `<option value="">— none (manual entry) —</option>`;
+  for (const e of bucket) {
+    html += `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`;
+  }
+  sel.innerHTML = html;
+}
+
+function applyPreset(name) {
+  if (!name || !state.currentTest) return;
+  const bucket = state.presets[state.currentTest.type] || [];
+  const entry = bucket.find(e => e.name === name);
+  if (!entry) return;
+  // Replace in-memory params, then re-render the form with the new
+  // values so the inputs reflect the preset.
+  state.currentTest.params = { ...entry.params };
+  renderParamsForm(state.currentTest.type);
+  appendEvent("info", `Loaded preset '${name}'`);
+}
+
+$("#preset-pick").addEventListener("change", (e) => applyPreset(e.target.value));
+
+$("#preset-save").addEventListener("click", () => {
+  if (!state.currentTest) return;
+  const name = (prompt("Save current parameters as preset name:",
+                       "") || "").trim();
+  if (!name) return;
+  // Read current form values so the preset captures whatever the
+  // operator actually entered, not the screen-load defaults.
+  const params = readParamsFromForm(state.currentTest.type);
+  send("presets_save", {
+    test_type: state.currentTest.type,
+    name, params,
+  });
+});
+
+$("#preset-delete").addEventListener("click", () => {
+  const name = $("#preset-pick").value;
+  if (!name || !state.currentTest) return;
+  if (!confirm(`Delete preset '${name}'?`)) return;
+  send("presets_delete", {
+    test_type: state.currentTest.type,
+    name,
+  });
+});
+
+function renderSiteHistory() {
+  const host = $("#history-list");
+  if (!host) return;
+  if (!state.history.length) {
+    host.innerHTML = `<span class="history-empty">none yet — runs will appear here as they complete</span>`;
+    return;
+  }
+  // Newest first; show last 8.
+  const items = state.history.slice(-8).reverse();
+  let html = "";
+  for (const e of items) {
+    const q = e.qualityName || "UNKNOWN";
+    const tsStr = e.timestamp
+      ? new Date(e.timestamp * 1000).toLocaleString()
+      : "—";
+    const fault = (e.faultFlags || e.recoveryTier)
+      ? ` · tier ${e.recoveryTier} · 0x${(e.faultFlags || 0).toString(16).padStart(4, "0")}`
+      : "";
+    html += `<div class="history-row">` +
+            `<span class="site">site ${pad3(e.siteId || 0)}</span>` +
+            `<span class="quality-pill q-${q}">${escapeHtml(qualityDisplay(q))}</span>` +
+            `<span class="meta">${e.duration_s ? e.duration_s.toFixed(1) + 's' : '—'}` +
+              `${fault}</span>` +
+            `<span class="meta">${e.maxForce ? e.maxForce.toFixed(0) + ' N max' : ''}</span>` +
+            `<span class="ts">${tsStr}</span>` +
+            `</div>`;
+  }
+  host.innerHTML = html;
+}
+
+$$("[data-preset]").forEach(b => {
+  b.addEventListener("click", () => {
+    const preset = b.dataset.preset;
+    let type = "cpt", params = defaultParams("cpt");
+    if (preset === "cpt-quick") {
+      params = { ...params, max_depth_m: 0.20 };
+    } else if (preset === "full") {
+      type = "full"; params = defaultParams("full");
+    }
+    state.currentTest = {
+      type, params,
+      plotMaxDepth_cm: (params.max_depth_m || 0.30) * 100 + 5,
+      plotMaxLoad_n: (params.max_load_n || params.peak_load_n || 500) * 1.1,
+    };
+    resetTestPlotState();
+    state.pendingFlow = "send-start";
+    send("ensure_ready");
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+// Done screen
+// ────────────────────────────────────────────────────────────
+function showDoneScreen(opts = {}) {
+  // Idempotent: if we're already showing done for this test, just
+  // re-render the result fields with whatever new data we have. The
+  // site-ID increment only happens on the first call per test.
+  const firstTime = state.screen !== "done";
+  const t = state.currentTest;
+  const r = state.lastSiteResult || {};
+  const siteId = state.siteId;
+
+  const title = (t ? TEST_NAME[t.type] : "Test") + " complete";
+  $("#done-title").textContent = title;
+
+  // Quality pill
+  const qPill = $("#done-quality");
+  let q = r.qualityName || (opts.aborted ? "FAULT" : "UNKNOWN");
+  qPill.textContent = qualityDisplay(q);
+  qPill.className = "quality-pill q-" + q;
+  qPill.title = QUALITY_TOOLTIPS[q] || "";
+
+  const explain = $("#done-quality-explain");
+  if (explain) explain.innerHTML = QUALITY_EXPLAIN[q] || "";
+
+  // Result cards by test type
+  const grid = $("#done-results");
+  const cards = buildResultCards(t ? t.type : null, r);
+  grid.innerHTML = cards.map(c => `
+    <div class="result-card">
+      <div class="label">${c.label}</div>
+      <div class="value">${c.value}</div>
+    </div>`).join("");
+
+  $("#done-file-quicklook").textContent = "cf/lrmh/data/lrmh_site_<time>.bin (DS appends; read with scripts/lrmh_read_record.py --latest)";
+  $("#done-file-summary").textContent   = "cf/lrmh/reports/lrmh_human_<time>.txt";
+
+  if (firstTime) {
+    // Increment site ID for the next test (only once per test).
+    state.siteId += 1;
+    localStorage.setItem("lrmh_site_id", String(state.siteId));
+    renderSiteId();
+  }
+
+  setScreen("done");
+}
+
+function qualityDisplay(q) {
+  return ({
+    VALID: "Valid",
+    PARTIAL: "Partial",
+    FAULT: "Fault",
+    UNKNOWN: "Unknown",
+  }[q] || q);
+}
+
+// Short tooltip on the pill itself.
+const QUALITY_TOOLTIPS = {
+  VALID: "All phases met their acceptance criteria.",
+  PARTIAL:
+    "Test ended early (abort or T2 fault). Some phases ran; results "
+    + "for completed phases are usable.",
+  FAULT:
+    "Test ended by a T3 fault or a ground ABORT; the instrument is in "
+    + "SAFE. Phases that completed before it produced usable data.",
+  UNKNOWN: "No site_result packet received yet.",
+};
+
+// Sentence-or-two below the pill, with an action hint.
+const QUALITY_EXPLAIN = {
+  VALID:
+    "<b>Valid</b>: all phases met acceptance. "
+    + "Run the next test or stow the instrument.",
+  PARTIAL:
+    "<b>Partial</b>: the site was skipped early (a T2 recovery, or an "
+    + "actuator command that timed out). Phases that completed produced "
+    + "valid data; later phases were skipped. Re-run if the dropped phases "
+    + "were essential.",
+  FAULT:
+    "<b>Fault</b>: the test ended by a T3 fault (overcurrent, thermal, bus "
+    + "voltage, or escalation) or a ground abort, and the instrument is in "
+    + "SAFE. Phases that completed before it are in the record. Inspect the "
+    + "event log, then INIT to recover.",
+  UNKNOWN:
+    "Waiting for site_result. If this persists, check that DS / lrmh_report "
+    + "are running and the bridge is connected.",
+};
+
+function buildResultCards(type, r) {
+  const cards = [];
+  const maxF = r.maxForce ?? null;
+  const sink = r.maxSinkage_mm ?? null;
+  const layer = r.layerBreakDepth_cm ?? null;
+  const stiff = r.stiffnessProxy ?? null;
+  const compaction = r.compactionDelta ?? null;
+
+  if (type === "cpt") {
+    cards.push({ label: "Max force",    value: fmtUnit(maxF, "N", 1) });
+    cards.push({ label: "Max depth",    value: fmtUnit(state.depth != null ? state.depth * 100 : null, "cm", 1) });
+    cards.push({ label: "Layer break",  value: fmtUnit(layer, "cm", 1) });
+    cards.push({ label: "Stiffness",    value: fmtUnit(stiff, "N/m", 1) });
+  } else if (type === "plate") {
+    cards.push({ label: "Max force",     value: fmtUnit(maxF, "N", 1) });
+    cards.push({ label: "Sinkage",       value: fmtUnit(sink, "mm", 1) });
+    cards.push({ label: "Compaction Δ",  value: fmtPct(compaction) });
+    cards.push({ label: "Cycles done",   value: state.currentTest && state.currentTest.params.cycles != null ? String(state.currentTest.params.cycles) : "—" });
+  } else {
+    cards.push({ label: "Max force",     value: fmtUnit(maxF, "N", 1) });
+    cards.push({ label: "Layer break",   value: fmtUnit(layer, "cm", 1) });
+    cards.push({ label: "Sinkage",       value: fmtUnit(sink, "mm", 1) });
+    cards.push({ label: "Compaction Δ",  value: fmtPct(compaction) });
+  }
+  return cards;
+}
+function fmtUnit(v, unit, decimals) {
+  if (v == null || Number.isNaN(v)) return "—";
+  return v.toFixed(decimals) + " " + unit;
+}
+function fmtPct(v) {
+  if (v == null || Number.isNaN(v)) return "—";
+  return (v * 100).toFixed(1) + "%";
+}
+
+// site_result is a finer signal than the IDLE return — it carries the
+// quality + result fields. If we get one while still on the run screen,
+// advance to done immediately so values are populated.
+const _origHandleSiteResult = handleSiteResult;
+handleSiteResult = function(m) {
+  _origHandleSiteResult(m);
+  if (state.currentTest && state.screen === "run") showDoneScreen({});
+};
+
+$("#done-again").addEventListener("click", () => {
+  state.currentTest = null;
+  state.lastSiteResult = null;
+  state.baselineSamples = [];
+  state.postSamples = [];
+  state.inPostPhase = false;
+  for (const sel of ["#run-legend-force-post", "#run-legend-qc-post",
+                     "#eng-legend-force-post", "#eng-legend-qc-post"]) {
+    const el = $(sel); if (el) hide(el);
+  }
+  renderSiteId();
+  setScreen("pick");
+});
+
+// ────────────────────────────────────────────────────────────
+// View toggle
+// ────────────────────────────────────────────────────────────
+$("#view-toggle").addEventListener("click", () => {
+  setView(state.view === "operator" ? "engineer" : "operator");
+});
+
+// ────────────────────────────────────────────────────────────
+// Boot
+// ────────────────────────────────────────────────────────────
+function boot() {
+  setView(state.view);
+  setScreen("pick");
+  renderSiteId();
+  renderConnection();
+  renderMode();
+  renderPipeline();
+  renderFaultStrip();
+  wirePlotToggles();
+  connect();
+
+  // Engineer log scroll detection
+  const log = $("#eng-log");
+  log.addEventListener("scroll", () => {
+    state.logAutoScroll = log.scrollHeight - log.scrollTop - log.clientHeight < 12;
+  });
+}
+
+function wirePlotToggles() {
+  // Each toggle group is `data-axis="x"` and `data-target="force"|"qc"`.
+  // Both views' force-plot toggles mirror each other; same for qc.
+  $$('.btn-group[data-axis="x"]').forEach(group => {
+    const target = group.dataset.target;            // "force" or "qc"
+    const stateKey = target === "qc" ? "xAxisQc" : "xAxisForce";
+    const cur = state.plot[stateKey];
+    $$("button", group).forEach(b => {
+      b.classList.toggle("on", b.dataset.mode === cur);
+      b.addEventListener("click", () => onPlotXToggle(target, b.dataset.mode));
+    });
+  });
+}
+
+function onPlotXToggle(target, mode) {
+  const stateKey = target === "qc" ? "xAxisQc" : "xAxisForce";
+  state.plot[stateKey] = mode;
+  localStorage.setItem("lrmh_plot_x_" + target, mode);
+  // Sync both views' button groups for this target.
+  $$(`.btn-group[data-axis="x"][data-target="${target}"]`).forEach(group => {
+    $$("button", group).forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
+  });
+  if (state.currentTest) renderPlot();
+}
+
+document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>
