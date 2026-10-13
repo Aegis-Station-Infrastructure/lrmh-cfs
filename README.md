@@ -1,5 +1,7 @@
 # LRMH cFS Flight Software
 
+[![build](https://github.com/Aegis-Station-Infrastructure/lrmh-cfs/actions/workflows/build.yml/badge.svg)](https://github.com/Aegis-Station-Infrastructure/lrmh-cfs/actions/workflows/build.yml)
+
 **Lunar Regolith Mechanics Head: a simulated geotechnical instrument on NASA cFS**
 
 LRMH is a simulated lunar regolith instrument you can build and run on any
